@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import ru.practicum.stats.dto.util.PatternDataTime;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -15,14 +16,13 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class ParamDto {
-    private static final String DATE_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss";
 
     @NotNull(message = "Дата начала диапазона (start) обязательна для заполнения")
-    @JsonFormat(pattern = DATE_TIME_PATTERN)
+    @JsonFormat(pattern = PatternDataTime.PATTERN)
     private LocalDateTime start;
 
     @NotNull(message = "Дата конца диапазона (end) обязательна для заполнения")
-    @JsonFormat(pattern = DATE_TIME_PATTERN)
+    @JsonFormat(pattern = PatternDataTime.PATTERN)
     private LocalDateTime end;
 
     private List<String> uris;
