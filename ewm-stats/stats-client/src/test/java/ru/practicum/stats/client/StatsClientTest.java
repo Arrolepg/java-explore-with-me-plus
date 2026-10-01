@@ -2,7 +2,6 @@ package ru.practicum.stats.client;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
@@ -13,24 +12,24 @@ import ru.practicum.stats.dto.response.ViewStatsDto;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
 
 class StatsClientTest {
-    @Autowired
     private StatClient statClient;
-    @Autowired
     private MockRestServiceServer mockServer;
     private ParamDto paramDto;
 
     @BeforeEach
     void setUp() {
-        RestClient.Builder builder = RestClient.builder();
+        RestClient.Builder builder = RestClient.builder().baseUrl("http://localhost:9090");
 
         mockServer = MockRestServiceServer.bindTo(builder).build();
-        statClient = new StatClient(builder, "http://localhost:9090");
+        RestClient restClient = builder.build();
+        statClient = new StatClient(restClient);
 
         paramDto = new ParamDto();
         paramDto.setStart(LocalDateTime.of(2026, 9, 20, 18, 30, 10));
@@ -79,8 +78,10 @@ class StatsClientTest {
         ResponseEntity<List<ViewStatsDto>> response =
                 statClient.get(paramDto);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).hasSize(1);
+        assertAll(
+                () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK),
+                () -> assertThat(response.getBody()).hasSize(1)
+        );
 
         mockServer.verify();
     }

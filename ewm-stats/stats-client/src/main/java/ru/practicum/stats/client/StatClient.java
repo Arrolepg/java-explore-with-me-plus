@@ -1,28 +1,25 @@
 package ru.practicum.stats.client;
 
-import org.springframework.beans.factory.annotation.Value;
+import lombok.RequiredArgsConstructor;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import ru.practicum.stats.dto.parameter.ParamDto;
 import ru.practicum.stats.dto.request.EndpointHitDto;
 import ru.practicum.stats.dto.response.ViewStatsDto;
+import ru.practicum.stats.dto.util.PatternDataTime;
 
 import java.net.URI;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-@Component
+
+@RequiredArgsConstructor
 public class StatClient {
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern(PatternDataTime.PATTERN);
     private final RestClient restClient;
-
-    public StatClient(RestClient.Builder builder, @Value("${stats.client.url}") String statUrl) {
-        this.restClient = builder.baseUrl(statUrl).build();
-
-    }
 
     public ResponseEntity<Void> createHit(EndpointHitDto dto) {
         return restClient.post()
@@ -34,12 +31,11 @@ public class StatClient {
     }
 
     public ResponseEntity<List<ViewStatsDto>> get(ParamDto dto) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
         URI uri = UriComponentsBuilder.newInstance()
                 .path("/stats")
-                .queryParam("start", dto.getStart().format(formatter))
-                .queryParam("end", dto.getEnd().format(formatter))
+                .queryParam("start", dto.getStart().format(FORMATTER))
+                .queryParam("end", dto.getEnd().format(FORMATTER))
                 .queryParam("uris", dto.getUris())
                 .queryParam("unique", dto.getUnique())
                 .build()
