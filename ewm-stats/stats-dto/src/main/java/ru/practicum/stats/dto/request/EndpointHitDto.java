@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import ru.practicum.stats.dto.util.PatternDataTime;
 
 import java.time.LocalDateTime;
 
@@ -35,6 +36,6 @@ public class EndpointHitDto {
     private String ip;
 
     @NotNull(message = "Дата и время когда произошла ошибка не может быть пустой")
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @JsonFormat(pattern = PatternDataTime.PATTERN)
     private LocalDateTime timestamp;
 }

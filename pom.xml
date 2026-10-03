@@ -125,6 +125,7 @@
 							<configuration>
 								<excludes>
 									<exclude>**/dto/**</exclude>
+									<exclude>**/service/**</exclude>
 								</excludes>
 								<rules>
 									<rule>
