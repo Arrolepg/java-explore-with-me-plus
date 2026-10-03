@@ -66,11 +66,10 @@ class StatsClientTest {
     void getShouldReturnStats() {
 
         mockServer.expect(request -> {
-                    assertThat(request.getMethod())
-                            .isEqualTo(HttpMethod.GET);
-
-                    assertThat(request.getURI().getPath())
-                            .isEqualTo("/stats");
+                    assertAll(
+                            () -> assertThat(request.getMethod()).isEqualTo(HttpMethod.GET),
+                            () -> assertThat(request.getURI().getPath()).isEqualTo("/stats")
+                    );
                 })
                 .andRespond(withSuccess("[{\"app\":\"ewm-main-service\",\"uri\":\"/events/1\",\"hits\":10}]",
                         MediaType.APPLICATION_JSON));
