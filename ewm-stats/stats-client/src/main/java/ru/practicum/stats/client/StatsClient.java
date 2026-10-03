@@ -17,7 +17,7 @@ import java.util.List;
 
 
 @RequiredArgsConstructor
-public class StatClient {
+public class StatsClient {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern(PatternDataTime.PATTERN);
     private final RestClient restClient;
 

@@ -19,18 +19,14 @@ import java.time.LocalDateTime;
 public class EndpointHitDto {
     private Long id;
 
-    @NotNull(message = "Идентификатор сервиса для которого записывается информация не может быть пустым")
     @NotBlank(message = "Идентификатор сервиса для которого записывается информация не может быть пустым")
     @Size(max = 1000, message = "Идентификатор сервиса не должен превышать 1000 символов")
     private String app;
 
-
-    @NotNull(message = "URI для которого был осуществлен запрос не может быть пустым")
     @NotBlank(message = "URI для которого был осуществлен запрос не может быть пустым")
     @Size(max = 1000, message = "URI для которого был осуществлен запрос не должен превышать 1000 символов")
     private String uri;
 
-    @NotNull(message = "IP-адрес пользователя, осуществившего запрос не может быть пустым")
     @NotBlank(message = "IP-адрес пользователя, осуществившего запрос не может быть пустым")
     @Size(min = 7, max = 45, message = "IP-адрес должен быть длиной от 7 до 45 символов")
     private String ip;

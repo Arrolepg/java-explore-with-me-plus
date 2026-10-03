@@ -6,10 +6,10 @@ import org.springframework.web.client.RestClient;
 import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
-public class StatClientConfig {
+public class StatsClientConfig {
 
     @Bean
-    public RestClient statRestClient(@Value("${stats.client.url}") String serverUrl) {
+    public RestClient statsRestClient(@Value("${stats.client.url}") String serverUrl) {
 
         return RestClient.builder()
                 .baseUrl(serverUrl)
@@ -17,8 +17,8 @@ public class StatClientConfig {
     }
 
     @Bean
-    public StatClient statClient(RestClient statsRestClient) {
-        return new StatClient(statsRestClient);
+    public StatsClient statsClient(RestClient statsRestClient) {
+        return new StatsClient(statsRestClient);
     }
 
 }

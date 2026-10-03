@@ -23,7 +23,7 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
-class StatsController {
+public class StatsController {
     private final StatsService statsService;
 
     @PostMapping("/hit")

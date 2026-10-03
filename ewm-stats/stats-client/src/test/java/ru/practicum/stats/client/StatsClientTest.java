@@ -19,7 +19,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 
 class StatsClientTest {
-    private StatClient statClient;
+    private StatsClient statsClient;
     private MockRestServiceServer mockServer;
     private ParamDto paramDto;
 
@@ -29,7 +29,7 @@ class StatsClientTest {
 
         mockServer = MockRestServiceServer.bindTo(builder).build();
         RestClient restClient = builder.build();
-        statClient = new StatClient(restClient);
+        statsClient = new StatsClient(restClient);
 
         paramDto = new ParamDto();
         paramDto.setStart(LocalDateTime.of(2026, 9, 20, 18, 30, 10));
@@ -55,7 +55,7 @@ class StatsClientTest {
         dto.setIp("192.163.0.1");
         dto.setTimestamp(LocalDateTime.of(2026, 9, 20, 18, 30, 10));
 
-        ResponseEntity<Void> response = statClient.createHit(dto);
+        ResponseEntity<Void> response = statsClient.createHit(dto);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
@@ -75,7 +75,7 @@ class StatsClientTest {
                         MediaType.APPLICATION_JSON));
 
         ResponseEntity<List<ViewStatsDto>> response =
-                statClient.get(paramDto);
+                statsClient.get(paramDto);
 
         assertAll(
                 () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK),
@@ -97,7 +97,7 @@ class StatsClientTest {
                 .andExpect(queryParam("unique", "false"))
                 .andRespond(withSuccess());
 
-        statClient.get(paramDto);
+        statsClient.get(paramDto);
 
         mockServer.verify();
     }
