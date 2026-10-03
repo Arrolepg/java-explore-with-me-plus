@@ -9,5 +9,6 @@ import java.util.List;
 public interface StatsService {
 
     EndpointHitDto saveHit(EndpointHitDto dto);
+
     List<ViewStatsDto> getStats(ParamDto params);
 }
