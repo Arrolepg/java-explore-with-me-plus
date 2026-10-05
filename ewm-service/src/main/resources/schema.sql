@@ -47,7 +47,6 @@ CREATE TABLE IF NOT EXISTS event
     created_on         TIMESTAMP WITHOUT TIME ZONE             NOT NULL DEFAULT CURRENT_TIMESTAMP,
     published_on       TIMESTAMP WITHOUT TIME ZONE,
     state              VARCHAR(120)                                     DEFAULT 'PENDING',
-    views              BIGINT                                  NOT NULL DEFAULT 0,
     initiator_id       BIGINT REFERENCES "user" (id) ON DELETE RESTRICT,
     CONSTRAINT chk_event_state_action CHECK (state_action IN ('SEND_TO_REVIEW', 'CANCEL_REVIEW', 'PUBLISH_EVENT', 'REJECT_EVENT')),
     CONSTRAINT chk_event_state CHECK (state IN ('PENDING', 'PUBLISHED', 'CANCELED')),
