@@ -69,7 +69,6 @@ COMMENT ON COLUMN event.state_action IS 'Enum: Действие над изме�
 COMMENT ON COLUMN event.created_on IS 'Дата и время создания события (автоматически при сохранении)';
 COMMENT ON COLUMN event.published_on IS 'Дата и время публикации события администратором';
 COMMENT ON COLUMN event.state IS 'Enum: Статус жизненного цикла события. Возможные значения: PENDING (ожидает модерации), PUBLISHED (опубликовано), CANCELED (отменено)';
-COMMENT ON COLUMN event.views IS 'Количество просмотров события (заполняется из сервиса статистики)';
 COMMENT ON COLUMN event.initiator_id IS 'Идентификатор пользователя, который является организатором (инициатором) события';
 
 CREATE TABLE IF NOT EXISTS compilation
