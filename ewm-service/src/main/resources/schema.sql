@@ -49,6 +49,8 @@ CREATE TABLE IF NOT EXISTS event
     state              VARCHAR(120)                                     DEFAULT 'PENDING',
     views              BIGINT                                  NOT NULL DEFAULT 0,
     initiator_id       BIGINT REFERENCES "user" (id) ON DELETE RESTRICT,
+    CONSTRAINT chk_event_state_action CHECK (state_action IN ('SEND_TO_REVIEW', 'CANCEL_REVIEW', 'PUBLISH_EVENT', 'REJECT_EVENT')),
+    CONSTRAINT chk_event_state CHECK (state IN ('PENDING', 'PUBLISHED', 'CANCELED')),
     CONSTRAINT pk_event PRIMARY KEY (id)
 );
 
@@ -104,6 +106,8 @@ CREATE TABLE IF NOT EXISTS participation_request
     created      TIMESTAMP WITHOUT TIME ZONE             NOT NULL DEFAULT CURRENT_TIMESTAMP,
     requester_id BIGINT REFERENCES "user" (id) ON DELETE RESTRICT,
     status       VARCHAR(120)                            NOT NULL DEFAULT 'PENDING',
+    CONSTRAINT chk_participation_request_status CHECK (status IN ('PENDING', 'CONFIRMED', 'REJECTED', 'CANCELED')),
+    CONSTRAINT unique_participation_request UNIQUE (event_id, requester_id),
     CONSTRAINT pk_participation_request PRIMARY KEY (id)
 );
 
