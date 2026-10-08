@@ -8,7 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import ru.practicum.stats.dto.util.PatternDataTime;
+import ru.practicum.common.util.PatternDataTime;
 
 import java.time.LocalDateTime;
 

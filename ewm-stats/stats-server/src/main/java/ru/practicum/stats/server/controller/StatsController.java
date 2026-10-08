@@ -11,10 +11,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import ru.practicum.common.util.PatternDataTime;
 import ru.practicum.stats.dto.parameter.ParamDto;
 import ru.practicum.stats.dto.request.EndpointHitDto;
 import ru.practicum.stats.dto.response.ViewStatsDto;
-import ru.practicum.stats.dto.util.PatternDataTime;
 import ru.practicum.stats.server.service.StatsService;
 
 import java.time.LocalDateTime;
