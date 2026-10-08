@@ -19,12 +19,11 @@ import ru.practicum.ewm.service.event.model.Event;
 import ru.practicum.ewm.service.event.model.EventLocation;
 import ru.practicum.ewm.service.event.model.EventState;
 import ru.practicum.ewm.service.event.repository.EventRepository;
-import ru.practicum.ewm.service.event.utility.EventSearchRequest;
+import ru.practicum.ewm.service.event.utility.PrivateEventSearchRequest;
 import ru.practicum.ewm.service.adapter.EventStatsAdapter;
 import ru.practicum.ewm.service.event.utility.ResourceReference;
 import ru.practicum.ewm.service.exception.ConflictException;
 import ru.practicum.ewm.service.exception.NotFoundException;
-import ru.practicum.ewm.service.exception.SortException;
 import ru.practicum.ewm.service.request.model.Request;
 import ru.practicum.ewm.service.request.model.RequestStatus;
 import ru.practicum.ewm.service.request.repository.RequestRepository;
@@ -227,7 +226,7 @@ public class EventServiceImplIntegrationTest {
         when(eventStatsAdapter.getViews(anyList())).thenReturn(Map.of());
 
         List<EventShortDto> result = eventService.findAll(owner.getId(),
-                new EventSearchRequest(0, 10, "id,asc"));
+                new PrivateEventSearchRequest(0, 10));
 
         assertThat(result).hasSize(2);
     }
@@ -237,7 +236,7 @@ public class EventServiceImplIntegrationTest {
         User owner = createUser("Owner", "owner@mail.com");
 
         List<EventShortDto> result = eventService.findAll(owner.getId(),
-                new EventSearchRequest(0, 10, "id,asc"));
+                new PrivateEventSearchRequest(0, 10));
 
         assertThat(result).isEmpty();
     }
@@ -245,17 +244,8 @@ public class EventServiceImplIntegrationTest {
     @Test
     void testFindAllUserNotFound() {
         assertThatThrownBy(() -> eventService.findAll(999L,
-                new EventSearchRequest(0, 10, "id,asc")))
+                new PrivateEventSearchRequest(0, 10)))
                 .isInstanceOf(NotFoundException.class);
-    }
-
-    @Test
-    void testFindAllInvalidSort() {
-        User owner = createUser("Owner", "owner@mail.com");
-
-        assertThatThrownBy(() -> eventService.findAll(owner.getId(),
-                new EventSearchRequest(0, 10, "title,asc")))
-                .isInstanceOf(SortException.class);
     }
 
     @Test

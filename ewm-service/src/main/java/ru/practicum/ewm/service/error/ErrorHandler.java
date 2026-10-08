@@ -13,7 +13,6 @@ import ru.practicum.common.error.ApiError;
 import ru.practicum.ewm.service.exception.BadRequestException;
 import ru.practicum.ewm.service.exception.ConflictException;
 import ru.practicum.ewm.service.exception.NotFoundException;
-import ru.practicum.ewm.service.exception.SortException;
 
 import java.time.LocalDateTime;
 import java.util.stream.Collectors;
@@ -25,8 +24,7 @@ public class ErrorHandler {
             BadRequestException.class,
             MissingServletRequestParameterException.class,
             MethodArgumentTypeMismatchException.class,
-            HttpMessageNotReadableException.class,
-            SortException.class
+            HttpMessageNotReadableException.class
     })
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiError handleBadRequest(final Exception e) {

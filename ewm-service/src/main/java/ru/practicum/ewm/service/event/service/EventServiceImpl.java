@@ -18,12 +18,11 @@ import ru.practicum.ewm.service.event.dto.response.EventShortDto;
 import ru.practicum.ewm.service.event.model.*;
 import ru.practicum.ewm.service.event.repository.EventRepository;
 import ru.practicum.ewm.service.event.utility.EventMapper;
-import ru.practicum.ewm.service.event.utility.EventSearchRequest;
+import ru.practicum.ewm.service.event.utility.PrivateEventSearchRequest;
 import ru.practicum.ewm.service.adapter.EventStatsAdapter;
 import ru.practicum.ewm.service.event.utility.ResourceReference;
 import ru.practicum.ewm.service.exception.ConflictException;
 import ru.practicum.ewm.service.exception.NotFoundException;
-import ru.practicum.ewm.service.exception.SortException;
 import ru.practicum.ewm.service.request.dto.ParticipationRequestDto;
 import ru.practicum.ewm.service.request.model.Request;
 import ru.practicum.ewm.service.request.model.RequestStatus;
@@ -34,15 +33,12 @@ import ru.practicum.ewm.service.user.query.UserQuery;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class EventServiceImpl implements EventService {
-    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
-            Event_.ID
-    );
+    private static final Sort SORT_BY_ID_ASC = Sort.by(Sort.Direction.ASC, Event_.ID);
 
     private final EventRepository eventRepository;
     private final UserQuery userQuery;
@@ -117,9 +113,9 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    public List<EventShortDto> findAll(Long userId, EventSearchRequest eventSearchRequest) {
+    public List<EventShortDto> findAll(Long userId, PrivateEventSearchRequest privateEventSearchRequest) {
         userQuery.checkUserExists(userId);
-        Pageable pageable = toPageable(eventSearchRequest);
+        Pageable pageable = toPageable(privateEventSearchRequest);
 
         List<Event> events = eventRepository.findEventsByInitiatorIdWithFetch(userId, pageable);
         if (events.isEmpty()) {
@@ -287,15 +283,11 @@ public class EventServiceImpl implements EventService {
         }
     }
 
-    private Pageable toPageable(EventSearchRequest eventSearchRequest) {
-        String[] sortParts = eventSearchRequest.sort().split(",");
-        if (!ALLOWED_SORT_FIELDS.contains(sortParts[0])) {
-            throw new SortException("Сортировка по полю " + sortParts[0] + " недоступна");
-        }
+    private Pageable toPageable(PrivateEventSearchRequest privateEventSearchRequest) {
         return PageRequest.of(
-                eventSearchRequest.from() / eventSearchRequest.size(),
-                eventSearchRequest.size(),
-                Sort.by(Sort.Direction.fromString(sortParts[1]), sortParts[0])
+                privateEventSearchRequest.from() / privateEventSearchRequest.size(),
+                privateEventSearchRequest.size(),
+                SORT_BY_ID_ASC
         );
     }
 }

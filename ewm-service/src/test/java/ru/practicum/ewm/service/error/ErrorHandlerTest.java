@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 import ru.practicum.ewm.service.exception.BadRequestException;
 import ru.practicum.ewm.service.exception.ConflictException;
 import ru.practicum.ewm.service.exception.NotFoundException;
-import ru.practicum.ewm.service.exception.SortException;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -125,15 +124,6 @@ class ErrorHandlerTest {
     }
 
     @Test
-    void testSortException() throws Exception {
-        mockMvc.perform(get("/test/sort"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.status").value("BAD_REQUEST"))
-                .andExpect(jsonPath("$.reason").value("Incorrectly made request."))
-                .andExpect(jsonPath("$.message").value(SORT_MSG));
-    }
-
-    @Test
     void testNotFoundException() throws Exception {
         mockMvc.perform(get("/test/not-found"))
                 .andExpect(status().isNotFound())
@@ -181,11 +171,6 @@ class ErrorHandlerTest {
         @GetMapping("/test/bad-request")
         void throwBadRequest() {
             throw new BadRequestException(BAD_REQUEST_MSG);
-        }
-
-        @GetMapping("/test/sort")
-        void throwSort() {
-            throw new SortException(SORT_MSG);
         }
 
         @GetMapping("/test/not-found")

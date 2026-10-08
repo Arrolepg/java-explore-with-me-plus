@@ -20,12 +20,11 @@ import ru.practicum.ewm.service.event.model.EventLocation;
 import ru.practicum.ewm.service.event.model.EventState;
 import ru.practicum.ewm.service.event.model.UserEventStateAction;
 import ru.practicum.ewm.service.event.repository.EventRepository;
-import ru.practicum.ewm.service.event.utility.EventSearchRequest;
+import ru.practicum.ewm.service.event.utility.PrivateEventSearchRequest;
 import ru.practicum.ewm.service.adapter.EventStatsAdapter;
 import ru.practicum.ewm.service.event.utility.ResourceReference;
 import ru.practicum.ewm.service.exception.ConflictException;
 import ru.practicum.ewm.service.exception.NotFoundException;
-import ru.practicum.ewm.service.exception.SortException;
 import ru.practicum.ewm.service.request.dto.ParticipationRequestDto;
 import ru.practicum.ewm.service.request.model.Request;
 import ru.practicum.ewm.service.request.model.RequestStatus;
@@ -336,7 +335,7 @@ public class EventServiceImplUnitTest {
         when(eventStatsAdapter.getViews(anyList())).thenReturn(Map.of(EVENT_ID, 7L));
 
         List<EventShortDto> result = eventService.findAll(USER_ID,
-                new EventSearchRequest(0, 10, "id,asc"));
+                new PrivateEventSearchRequest(0, 10));
 
         assertThat(result).hasSize(1);
         assertThat(result.getFirst().getId()).isEqualTo(EVENT_ID);
@@ -355,7 +354,7 @@ public class EventServiceImplUnitTest {
                 .thenReturn(List.of());
 
         List<EventShortDto> result = eventService.findAll(USER_ID,
-                new EventSearchRequest(0, 10, "id,asc"));
+                new PrivateEventSearchRequest(0, 10));
 
         assertThat(result).isEmpty();
 
@@ -369,17 +368,8 @@ public class EventServiceImplUnitTest {
         doThrow(new NotFoundException("")).when(userQuery).checkUserExists(99L);
 
         assertThatThrownBy(() -> eventService.findAll(99L,
-                new EventSearchRequest(0, 10, "id,asc")))
+                new PrivateEventSearchRequest(0, 10)))
                 .isInstanceOf(NotFoundException.class);
-
-        verify(eventRepository, never()).findEventsByInitiatorIdWithFetch(any(), any());
-    }
-
-    @Test
-    void testFindAllInvalidSort() {
-        assertThatThrownBy(() -> eventService.findAll(USER_ID,
-                new EventSearchRequest(0, 10, "title,asc")))
-                .isInstanceOf(SortException.class);
 
         verify(eventRepository, never()).findEventsByInitiatorIdWithFetch(any(), any());
     }

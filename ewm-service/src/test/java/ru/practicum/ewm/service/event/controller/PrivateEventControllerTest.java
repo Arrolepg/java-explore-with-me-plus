@@ -17,7 +17,7 @@ import ru.practicum.ewm.service.event.dto.response.EventRequestStatusUpdateResul
 import ru.practicum.ewm.service.event.dto.response.EventShortDto;
 import ru.practicum.ewm.service.event.model.EventState;
 import ru.practicum.ewm.service.event.service.EventService;
-import ru.practicum.ewm.service.event.utility.EventSearchRequest;
+import ru.practicum.ewm.service.event.utility.PrivateEventSearchRequest;
 import ru.practicum.ewm.service.event.utility.ResourceReference;
 import ru.practicum.ewm.service.exception.ConflictException;
 import ru.practicum.ewm.service.exception.NotFoundException;
@@ -56,7 +56,7 @@ public class PrivateEventControllerTest {
 
     @Test
     void testFindAll() throws Exception {
-        when(eventService.findAll(eq(USER_ID), any(EventSearchRequest.class)))
+        when(eventService.findAll(eq(USER_ID), any(PrivateEventSearchRequest.class)))
                 .thenReturn(List.of(createEventShortDto()));
 
         mockMvc.perform(get(API_PREFIX, USER_ID))
@@ -66,26 +66,26 @@ public class PrivateEventControllerTest {
                 .andExpect(jsonPath("$[0].id").value(EVENT_ID))
                 .andExpect(jsonPath("$[0].title").value(TITLE));
 
-        verify(eventService, times(1)).findAll(eq(USER_ID), any(EventSearchRequest.class));
+        verify(eventService, times(1)).findAll(eq(USER_ID), any(PrivateEventSearchRequest.class));
         verifyNoMoreInteractions(eventService);
     }
 
     @Test
     void testFindAllEmpty() throws Exception {
-        when(eventService.findAll(eq(USER_ID), any(EventSearchRequest.class)))
+        when(eventService.findAll(eq(USER_ID), any(PrivateEventSearchRequest.class)))
                 .thenReturn(List.of());
 
         mockMvc.perform(get(API_PREFIX, USER_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
 
-        verify(eventService, times(1)).findAll(eq(USER_ID), any(EventSearchRequest.class));
+        verify(eventService, times(1)).findAll(eq(USER_ID), any(PrivateEventSearchRequest.class));
         verifyNoMoreInteractions(eventService);
     }
 
     @Test
     void testFindAllWithCustomParams() throws Exception {
-        when(eventService.findAll(eq(USER_ID), any(EventSearchRequest.class)))
+        when(eventService.findAll(eq(USER_ID), any(PrivateEventSearchRequest.class)))
                 .thenReturn(List.of());
 
         mockMvc.perform(get(API_PREFIX, USER_ID)
@@ -94,19 +94,19 @@ public class PrivateEventControllerTest {
                         .param("sort", "id,desc"))
                 .andExpect(status().isOk());
 
-        verify(eventService, times(1)).findAll(eq(USER_ID), any(EventSearchRequest.class));
+        verify(eventService, times(1)).findAll(eq(USER_ID), any(PrivateEventSearchRequest.class));
         verifyNoMoreInteractions(eventService);
     }
 
     @Test
     void testFindAllUserNotFound() throws Exception {
-        when(eventService.findAll(eq(99L), any(EventSearchRequest.class)))
+        when(eventService.findAll(eq(99L), any(PrivateEventSearchRequest.class)))
                 .thenThrow(new NotFoundException(""));
 
         mockMvc.perform(get(API_PREFIX, 99L))
                 .andExpect(status().isNotFound());
 
-        verify(eventService, times(1)).findAll(eq(99L), any(EventSearchRequest.class));
+        verify(eventService, times(1)).findAll(eq(99L), any(PrivateEventSearchRequest.class));
         verifyNoMoreInteractions(eventService);
     }
 

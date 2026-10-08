@@ -6,7 +6,7 @@ import ru.practicum.ewm.service.event.dto.request.UpdateEventUserRequest;
 import ru.practicum.ewm.service.event.dto.response.EventFullDto;
 import ru.practicum.ewm.service.event.dto.response.EventRequestStatusUpdateResult;
 import ru.practicum.ewm.service.event.dto.response.EventShortDto;
-import ru.practicum.ewm.service.event.utility.EventSearchRequest;
+import ru.practicum.ewm.service.event.utility.PrivateEventSearchRequest;
 import ru.practicum.ewm.service.event.utility.ResourceReference;
 import ru.practicum.ewm.service.request.dto.ParticipationRequestDto;
 
@@ -22,7 +22,7 @@ public interface EventService {
     EventRequestStatusUpdateResult updateRequests(ResourceReference resourceReference,
                                                   EventRequestStatusUpdateRequest statusUpdateRequestDto);
 
-    List<EventShortDto> findAll(Long userId, EventSearchRequest eventSearchRequest);
+    List<EventShortDto> findAll(Long userId, PrivateEventSearchRequest privateEventSearchRequest);
 
     EventFullDto findById(ResourceReference resourceReference);
 }
