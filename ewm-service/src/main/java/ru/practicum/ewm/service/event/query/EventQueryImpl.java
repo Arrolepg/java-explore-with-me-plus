@@ -2,14 +2,12 @@ package ru.practicum.ewm.service.event.query;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.service.event.model.Event;
 import ru.practicum.ewm.service.event.repository.EventRepository;
 import ru.practicum.ewm.service.exception.NotFoundException;
 
 @Component
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class EventQueryImpl implements EventQuery {
     private final EventRepository eventRepository;
 
