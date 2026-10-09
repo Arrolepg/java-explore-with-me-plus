@@ -9,9 +9,16 @@ import ru.practicum.ewm.service.request.repository.projection.EventRequestsCount
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface RequestRepository extends JpaRepository<Request, Long> {
+    List<Request> findByRequester_Id(Long userId);
+
+    Boolean existsByRequester_IdAndEvent_Id(Long userId, Long eventId);
+
+    Optional<Request> findByIdAndRequester_Id(Long requestId, Long userId);
+
     List<Request> findRequestsByEventId(Long id);
 
     List<Request> findRequestsByIdInAndEventId(Collection<Long> ids, Long eventId);

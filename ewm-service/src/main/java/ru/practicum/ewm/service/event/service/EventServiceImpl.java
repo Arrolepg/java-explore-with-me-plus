@@ -16,6 +16,7 @@ import ru.practicum.ewm.service.event.dto.response.EventFullDto;
 import ru.practicum.ewm.service.event.dto.response.EventRequestStatusUpdateResult;
 import ru.practicum.ewm.service.event.dto.response.EventShortDto;
 import ru.practicum.ewm.service.event.model.*;
+import ru.practicum.ewm.service.event.query.EventQuery;
 import ru.practicum.ewm.service.event.repository.EventRepository;
 import ru.practicum.ewm.service.event.utility.EventMapper;
 import ru.practicum.ewm.service.event.utility.PrivateEventSearchRequest;
@@ -44,6 +45,7 @@ public class EventServiceImpl implements EventService {
     private final UserQuery userQuery;
     private final CategoryQuery categoryQuery;
     private final RequestQuery requestQuery;
+    private final EventQuery eventQuery;
 
     private final EventStatsAdapter eventStatsAdapter;
 
@@ -80,7 +82,7 @@ public class EventServiceImpl implements EventService {
     public List<ParticipationRequestDto> findRequests(ResourceReference resourceReference) {
         userQuery.checkUserExists(resourceReference.userId());
 
-        Event event = findEvent(resourceReference.eventId());
+        Event event = eventQuery.findEvent(resourceReference.eventId());
         checkInitiator(event.getInitiator().getId(), resourceReference.userId());
 
         return requestQuery.findRequests(resourceReference.eventId());
@@ -92,7 +94,7 @@ public class EventServiceImpl implements EventService {
                                                          EventRequestStatusUpdateRequest statusUpdateRequestDto) {
         userQuery.checkUserExists(resourceReference.userId());
 
-        Event event = findEvent(resourceReference.eventId());
+        Event event = eventQuery.findEvent(resourceReference.eventId());
         checkInitiator(event.getInitiator().getId(), resourceReference.userId());
 
         List<Request> requests = requestQuery.findRequestsByIdsAndEventId(statusUpdateRequestDto.getRequestIds(),
@@ -160,13 +162,6 @@ public class EventServiceImpl implements EventService {
 
     private Event findFullEvent(Long eventId) {
         return eventRepository.findByIdWithFetch(eventId)
-                .orElseThrow(
-                        () -> new NotFoundException("Событие с id = " + eventId + " не найдено")
-                );
-    }
-
-    private Event findEvent(Long eventId) {
-        return eventRepository.findById(eventId)
                 .orElseThrow(
                         () -> new NotFoundException("Событие с id = " + eventId + " не найдено")
                 );

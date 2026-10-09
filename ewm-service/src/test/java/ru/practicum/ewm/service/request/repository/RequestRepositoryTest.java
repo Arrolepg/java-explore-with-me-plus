@@ -19,6 +19,7 @@ import ru.practicum.ewm.service.user.model.User;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -105,6 +106,92 @@ public class RequestRepositoryTest {
         assertThat(result).isEmpty();
     }
 
+    @Test
+    void testFindByRequesterIdEmpty() {
+        User owner = createUser("Owner", "owner@mail.com");
+        User user1 = createUser("User1", "u1@mail.com");
+        User user2 = createUser("User2", "u2@mail.com");
+
+        Category category = createCategory("Cat");
+        Event event1 = createEvent(owner, category);
+        Event event2 = createEvent(owner, category);
+
+        createRequest(event1, user1, RequestStatus.CONFIRMED);
+        createRequest(event2, user1, RequestStatus.CONFIRMED);
+
+        List<Request> result = requestRepository.findByRequester_Id(user2.getId());
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void testFindByRequesterId() {
+        User owner = createUser("Owner", "owner@mail.com");
+        User user1 = createUser("User1", "u1@mail.com");
+        User user2 = createUser("User2", "u2@mail.com");
+
+        Category category = createCategory("Cat");
+        Event event1 = createEvent(owner, category);
+        Event event2 = createEvent(owner, category);
+
+        Request request1 = createRequest(event1, user1, RequestStatus.CONFIRMED);
+        Request request2 = createRequest(event2, user1, RequestStatus.CONFIRMED);
+
+        List<Request> result = requestRepository.findByRequester_Id(user1.getId());
+        assertThat(result)
+                .extracting(Request::getId)
+                .containsExactlyInAnyOrder(request1.getId(), request2.getId());
+
+        assertThat(result)
+                .extracting(request -> request.getRequester().getId())
+                .containsOnly(user1.getId());
+    }
+
+    @Test
+    void testExistsByRequesterIdAndEventIdShouldBeTrue() {
+        User owner = createUser("Owner", "owner@mail.com");
+        User user1 = createUser("User1", "u1@mail.com");
+
+        Category category = createCategory("Cat");
+        Event event1 = createEvent(owner, category);
+
+        createRequest(event1, user1, RequestStatus.CONFIRMED);
+
+        assertThat(requestRepository.existsByRequester_IdAndEvent_Id(user1.getId(), event1.getId()))
+                .isTrue();
+    }
+
+    @Test
+    void testFindByIdAndRequesterId() {
+        User owner = createUser("Owner", "owner@mail.com");
+        User user1 = createUser("User1", "u1@mail.com");
+
+        Category category = createCategory("Cat");
+        Event event1 = createEvent(owner, category);
+
+        Request request = createRequest(event1, user1, RequestStatus.CONFIRMED);
+
+        Optional<Request> result = requestRepository.findByIdAndRequester_Id(request.getId(), user1.getId());
+
+        assertThat(result).hasValueSatisfying(r ->
+                assertThat(r.getId()).isEqualTo(request.getId()));
+    }
+
+    @Test
+    void testFindByIdAndRequesterIdShouldBeEmpty() {
+        User owner = createUser("Owner", "owner@mail.com");
+        User user1 = createUser("User1", "u1@mail.com");
+        User user2 = createUser("User2", "u2@mail.com");
+
+        Category category = createCategory("Cat");
+        Event event1 = createEvent(owner, category);
+
+        Request request = createRequest(event1, user1, RequestStatus.CONFIRMED);
+
+        Optional<Request> result = requestRepository.findByIdAndRequester_Id(request.getId(), user2.getId());
+
+        assertThat(result).isEmpty();
+    }
+
     private User createUser(String name, String email) {
         User user = new User();
         user.setName(name);
@@ -140,13 +227,13 @@ public class RequestRepositoryTest {
         return entityManager.persistAndFlush(event);
     }
 
-    private void createRequest(Event event, User requester, RequestStatus status) {
+    private Request createRequest(Event event, User requester, RequestStatus status) {
         Request request = Request.builder()
                 .event(event)
                 .requester(requester)
                 .status(status)
                 .created(LocalDateTime.now())
                 .build();
-        entityManager.persistAndFlush(request);
+        return entityManager.persistAndFlush(request);
     }
 }
