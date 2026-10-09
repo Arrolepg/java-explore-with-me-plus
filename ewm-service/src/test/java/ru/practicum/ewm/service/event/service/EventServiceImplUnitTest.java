@@ -19,6 +19,7 @@ import ru.practicum.ewm.service.event.model.Event;
 import ru.practicum.ewm.service.event.model.EventLocation;
 import ru.practicum.ewm.service.event.model.EventState;
 import ru.practicum.ewm.service.event.model.UserEventStateAction;
+import ru.practicum.ewm.service.event.query.EventQuery;
 import ru.practicum.ewm.service.event.repository.EventRepository;
 import ru.practicum.ewm.service.event.utility.PrivateEventSearchRequest;
 import ru.practicum.ewm.service.adapter.EventStatsAdapter;
@@ -67,6 +68,9 @@ public class EventServiceImplUnitTest {
 
     @Mock
     private EventStatsAdapter eventStatsAdapter;
+
+    @Mock
+    private EventQuery eventQuery;
 
     @InjectMocks
     private EventServiceImpl eventService;
@@ -195,7 +199,7 @@ public class EventServiceImplUnitTest {
     @Test
     void testFindRequests() {
         Event event = createEvent(EVENT_ID, USER_ID, EventState.PENDING);
-        when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(event));
+        when(eventQuery.findEvent(EVENT_ID)).thenReturn(event);
         when(requestQuery.findRequests(EVENT_ID)).thenReturn(List.of(createParticipationRequestDto()));
 
         List<ParticipationRequestDto> result = eventService.findRequests(
@@ -205,7 +209,7 @@ public class EventServiceImplUnitTest {
         assertThat(result.getFirst().getId()).isEqualTo(REQUEST_ID);
 
         verify(userQuery, times(1)).checkUserExists(USER_ID);
-        verify(eventRepository, times(1)).findById(EVENT_ID);
+        verify(eventQuery, times(1)).findEvent(EVENT_ID);
         verify(requestQuery, times(1)).findRequests(EVENT_ID);
     }
 
@@ -221,7 +225,8 @@ public class EventServiceImplUnitTest {
 
     @Test
     void testFindRequestsEventNotFound() {
-        when(eventRepository.findById(99L)).thenReturn(Optional.empty());
+        when(eventQuery.findEvent(99L))
+                .thenThrow(new NotFoundException("Событие с id = 99 не найдено"));
 
         assertThatThrownBy(() -> eventService.findRequests(new ResourceReference(USER_ID, 99L)))
                 .isInstanceOf(NotFoundException.class);
@@ -232,7 +237,7 @@ public class EventServiceImplUnitTest {
     @Test
     void testFindRequestsNotInitiator() {
         Event event = createEvent(EVENT_ID, OTHER_USER_ID, EventState.PENDING);
-        when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(event));
+        when(eventQuery.findEvent(EVENT_ID)).thenReturn(event);
 
         assertThatThrownBy(() -> eventService.findRequests(new ResourceReference(USER_ID, EVENT_ID)))
                 .isInstanceOf(ConflictException.class);
@@ -245,7 +250,7 @@ public class EventServiceImplUnitTest {
         Event event = createEvent(EVENT_ID, USER_ID, EventState.PENDING);
         event.setParticipantLimit(10);
         Request request = createRequest(REQUEST_ID, RequestStatus.PENDING);
-        when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(event));
+        when(eventQuery.findEvent(EVENT_ID)).thenReturn(event);
         when(requestQuery.findRequestsByIdsAndEventId(List.of(REQUEST_ID), EVENT_ID))
                 .thenReturn(List.of(request));
         when(requestQuery.countRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.CONFIRMED))
@@ -265,7 +270,7 @@ public class EventServiceImplUnitTest {
         Event event = createEvent(EVENT_ID, USER_ID, EventState.PENDING);
         event.setParticipantLimit(10);
         Request request = createRequest(REQUEST_ID, RequestStatus.PENDING);
-        when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(event));
+        when(eventQuery.findEvent(EVENT_ID)).thenReturn(event);
         when(requestQuery.findRequestsByIdsAndEventId(List.of(REQUEST_ID), EVENT_ID))
                 .thenReturn(List.of(request));
         when(requestQuery.countRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.CONFIRMED))
@@ -285,7 +290,7 @@ public class EventServiceImplUnitTest {
         Event event = createEvent(EVENT_ID, USER_ID, EventState.PENDING);
         event.setParticipantLimit(10);
         Request request = createRequest(REQUEST_ID, RequestStatus.CONFIRMED);
-        when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(event));
+        when(eventQuery.findEvent(EVENT_ID)).thenReturn(event);
         when(requestQuery.findRequestsByIdsAndEventId(List.of(REQUEST_ID), EVENT_ID))
                 .thenReturn(List.of(request));
 
@@ -301,7 +306,7 @@ public class EventServiceImplUnitTest {
         Event event = createEvent(EVENT_ID, USER_ID, EventState.PENDING);
         event.setParticipantLimit(5);
         Request request = createRequest(REQUEST_ID, RequestStatus.PENDING);
-        when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(event));
+        when(eventQuery.findEvent(EVENT_ID)).thenReturn(event);
         when(requestQuery.findRequestsByIdsAndEventId(List.of(REQUEST_ID), EVENT_ID))
                 .thenReturn(List.of(request));
         when(requestQuery.countRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.CONFIRMED))
