@@ -11,8 +11,7 @@ import ru.practicum.ewm.service.event.dto.response.EventRequestStatusUpdateResul
 import ru.practicum.ewm.service.event.dto.response.EventShortDto;
 import ru.practicum.ewm.service.event.model.Event;
 import ru.practicum.ewm.service.event.model.EventLocation;
-import ru.practicum.ewm.service.request.model.Request;
-import ru.practicum.ewm.service.request.utility.RequestMapper;
+import ru.practicum.ewm.service.request.command.RequestStatusUpdateResult;
 import ru.practicum.ewm.service.user.model.User;
 import ru.practicum.ewm.service.user.utility.UserMapper;
 
@@ -77,10 +76,10 @@ public class EventMapper {
     }
 
     public EventRequestStatusUpdateResult toEventRequestStatusUpdateResult(
-            List<Request> confirmedRequests, List<Request> rejectedRequests) {
+            RequestStatusUpdateResult updateResult) {
         return EventRequestStatusUpdateResult.builder()
-                .confirmedRequests(RequestMapper.toListParticipationRequestDto(confirmedRequests))
-                .rejectedRequests(RequestMapper.toListParticipationRequestDto(rejectedRequests))
+                .confirmedRequests(updateResult.confirmedRequests())
+                .rejectedRequests(updateResult.rejectedRequests())
                 .build();
     }
 

@@ -44,6 +44,10 @@ import static org.mockito.Mockito.when;
 @ActiveProfiles("test")
 @Transactional
 public class EventServiceImplIntegrationTest {
+    private static final String OWNER_NAME = "Owner";
+    private static final String OWNER_EMAIL = "owner@mail.com";
+    private static final String SECOND_NAME = "Second";
+    private static final String SECOND_EMAIL = "second@mail.com";
     private static final String ANNOTATION = "Annotation";
     private static final String DESCRIPTION = "Description";
     private static final String TITLE = "Title";
@@ -68,7 +72,7 @@ public class EventServiceImplIntegrationTest {
 
     @Test
     void testCreate() {
-        User owner = createUser("Owner", "owner@mail.com");
+        User owner = createUser(OWNER_NAME, OWNER_EMAIL);
         Category category = createCategory("Cat");
 
         EventFullDto result = eventService.create(owner.getId(), createNewEventDto(category.getId()));
@@ -86,7 +90,7 @@ public class EventServiceImplIntegrationTest {
 
     @Test
     void testCreateCategoryNotFound() {
-        User owner = createUser("Owner", "owner@mail.com");
+        User owner = createUser(OWNER_NAME, OWNER_EMAIL);
 
         assertThatThrownBy(() -> eventService.create(owner.getId(), createNewEventDto(999L)))
                 .isInstanceOf(NotFoundException.class);
@@ -94,7 +98,7 @@ public class EventServiceImplIntegrationTest {
 
     @Test
     void testUpdate() {
-        User owner = createUser("Owner", "owner@mail.com");
+        User owner = createUser(OWNER_NAME, OWNER_EMAIL);
         Event event = createEvent(owner, EventState.PENDING);
         when(eventStatsAdapter.getViews(any(Event.class))).thenReturn(0L);
 
@@ -115,7 +119,7 @@ public class EventServiceImplIntegrationTest {
 
     @Test
     void testUpdateEventNotFound() {
-        User owner = createUser("Owner", "owner@mail.com");
+        User owner = createUser(OWNER_NAME, OWNER_EMAIL);
 
         assertThatThrownBy(() -> eventService.update(
                 new ResourceReference(owner.getId(), 999L), new UpdateEventUserRequest()))
@@ -124,8 +128,8 @@ public class EventServiceImplIntegrationTest {
 
     @Test
     void testUpdateNotInitiator() {
-        User owner = createUser("Owner", "owner@mail.com");
-        User stranger = createUser("Stranger", "stranger@mail.com");
+        User owner = createUser(OWNER_NAME, OWNER_EMAIL);
+        User stranger = createUser(SECOND_NAME, SECOND_EMAIL);
         Event event = createEvent(owner, EventState.PENDING);
 
         assertThatThrownBy(() -> eventService.update(
@@ -135,7 +139,7 @@ public class EventServiceImplIntegrationTest {
 
     @Test
     void testUpdatePublishedState() {
-        User owner = createUser("Owner", "owner@mail.com");
+        User owner = createUser(OWNER_NAME, OWNER_EMAIL);
         Event event = createEvent(owner, EventState.PUBLISHED);
 
         assertThatThrownBy(() -> eventService.update(
@@ -145,8 +149,8 @@ public class EventServiceImplIntegrationTest {
 
     @Test
     void testFindRequests() {
-        User owner = createUser("Owner", "owner@mail.com");
-        User requester = createUser("Requester", "req@mail.com");
+        User owner = createUser(OWNER_NAME, OWNER_EMAIL);
+        User requester = createUser(SECOND_NAME, SECOND_EMAIL);
         Event event = createEvent(owner, EventState.PENDING);
         createRequest(event, requester, RequestStatus.PENDING);
 
@@ -157,7 +161,7 @@ public class EventServiceImplIntegrationTest {
 
     @Test
     void testFindRequestsEventNotFound() {
-        User owner = createUser("Owner", "owner@mail.com");
+        User owner = createUser(OWNER_NAME, OWNER_EMAIL);
 
         assertThatThrownBy(() -> eventService.findRequests(
                 new ResourceReference(owner.getId(), 999L)))
@@ -166,8 +170,8 @@ public class EventServiceImplIntegrationTest {
 
     @Test
     void testUpdateRequestsConfirmed() {
-        User owner = createUser("Owner", "owner@mail.com");
-        User requester = createUser("Requester", "req@mail.com");
+        User owner = createUser(OWNER_NAME, OWNER_EMAIL);
+        User requester = createUser(SECOND_NAME, SECOND_EMAIL);
         Event event = createEvent(owner, EventState.PENDING);
         event.setParticipantLimit(10);
         eventRepository.save(event);
@@ -186,8 +190,8 @@ public class EventServiceImplIntegrationTest {
 
     @Test
     void testUpdateRequestsRejected() {
-        User owner = createUser("Owner", "owner@mail.com");
-        User requester = createUser("Requester", "req@mail.com");
+        User owner = createUser(OWNER_NAME, OWNER_EMAIL);
+        User requester = createUser(SECOND_NAME, SECOND_EMAIL);
         Event event = createEvent(owner, EventState.PENDING);
         Request request = createRequest(event, requester, RequestStatus.PENDING);
 
@@ -204,8 +208,8 @@ public class EventServiceImplIntegrationTest {
 
     @Test
     void testUpdateRequestsNotPending() {
-        User owner = createUser("Owner", "owner@mail.com");
-        User requester = createUser("Requester", "req@mail.com");
+        User owner = createUser(OWNER_NAME, OWNER_EMAIL);
+        User requester = createUser(SECOND_NAME, SECOND_EMAIL);
         Event event = createEvent(owner, EventState.PENDING);
         Request request = createRequest(event, requester, RequestStatus.CONFIRMED);
 
@@ -219,8 +223,34 @@ public class EventServiceImplIntegrationTest {
     }
 
     @Test
+    void testUpdateRequestsRejectsRemainingWhenLimitReached() {
+        User owner = createUser(OWNER_NAME, OWNER_EMAIL);
+        User requester1 = createUser(SECOND_NAME, SECOND_EMAIL);
+        User requester2 = createUser("Req2", "req2@mail.com");
+
+        Event event = createEvent(owner, EventState.PENDING);
+        event.setParticipantLimit(1);
+        eventRepository.save(event);
+
+        Request request1 = createRequest(event, requester1, RequestStatus.PENDING);
+        Request request2 = createRequest(event, requester2, RequestStatus.PENDING);
+
+        EventRequestStatusUpdateRequest dto = new EventRequestStatusUpdateRequest();
+        dto.setRequestIds(List.of(request1.getId()));
+        dto.setStatus(RequestStatus.CONFIRMED);
+
+        EventRequestStatusUpdateResult result = eventService.updateRequests(
+                new ResourceReference(owner.getId(), event.getId()), dto);
+
+        assertThat(result.getConfirmedRequests()).hasSize(1);
+
+        Request rejected = requestRepository.findById(request2.getId()).orElseThrow();
+        assertThat(rejected.getStatus()).isEqualTo(RequestStatus.REJECTED);
+    }
+
+    @Test
     void testFindAll() {
-        User owner = createUser("Owner", "owner@mail.com");
+        User owner = createUser(OWNER_NAME, OWNER_EMAIL);
         createEvent(owner, EventState.PENDING);
         createEvent(owner, EventState.PENDING);
         when(eventStatsAdapter.getViews(anyList())).thenReturn(Map.of());
@@ -233,7 +263,7 @@ public class EventServiceImplIntegrationTest {
 
     @Test
     void testFindAllEmpty() {
-        User owner = createUser("Owner", "owner@mail.com");
+        User owner = createUser(OWNER_NAME, OWNER_EMAIL);
 
         List<EventShortDto> result = eventService.findAll(owner.getId(),
                 new PrivateEventSearchRequest(0, 10));
@@ -250,7 +280,7 @@ public class EventServiceImplIntegrationTest {
 
     @Test
     void testFindById() {
-        User owner = createUser("Owner", "owner@mail.com");
+        User owner = createUser(OWNER_NAME, OWNER_EMAIL);
         Event event = createEvent(owner, EventState.PENDING);
         when(eventStatsAdapter.getViews(any(Event.class))).thenReturn(0L);
 
@@ -261,7 +291,7 @@ public class EventServiceImplIntegrationTest {
 
     @Test
     void testFindByIdEventNotFound() {
-        User owner = createUser("Owner", "owner@mail.com");
+        User owner = createUser(OWNER_NAME, OWNER_EMAIL);
 
         assertThatThrownBy(() -> eventService.findById(
                 new ResourceReference(owner.getId(), 999L)))
@@ -270,8 +300,8 @@ public class EventServiceImplIntegrationTest {
 
     @Test
     void testFindByIdNotInitiator() {
-        User owner = createUser("Owner", "owner@mail.com");
-        User stranger = createUser("Stranger", "stranger@mail.com");
+        User owner = createUser(OWNER_NAME, OWNER_EMAIL);
+        User stranger = createUser(SECOND_NAME, SECOND_EMAIL);
         Event event = createEvent(owner, EventState.PENDING);
 
         assertThatThrownBy(() -> eventService.findById(
