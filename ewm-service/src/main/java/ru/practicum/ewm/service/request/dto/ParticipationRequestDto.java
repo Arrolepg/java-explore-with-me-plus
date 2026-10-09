@@ -1,11 +1,9 @@
 package ru.practicum.ewm.service.request.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import ru.practicum.common.util.PatternDataTime;
 import ru.practicum.ewm.service.request.model.RequestStatus;
 
 import java.time.LocalDateTime;
@@ -16,7 +14,6 @@ import java.time.LocalDateTime;
 public class ParticipationRequestDto {
     private Long id;
 
-    @JsonFormat(pattern = PatternDataTime.PATTERN)
     private LocalDateTime created;
 
     @JsonProperty("event")

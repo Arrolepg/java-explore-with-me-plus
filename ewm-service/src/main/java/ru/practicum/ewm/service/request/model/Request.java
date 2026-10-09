@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Entity
 @Table(name = "participation_request")
+@EqualsAndHashCode(of = "id")
 public class Request {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,18 +34,5 @@ public class Request {
 
     @Enumerated(EnumType.STRING)
     private RequestStatus status;
-
-    @Override
-    public final boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof Request)) return false;
-
-        return id != null && id.equals(((Request) o).getId());
-    }
-
-    @Override
-    public final int hashCode() {
-        return id != null ? id.hashCode() : getClass().hashCode();
-    }
 
 }
