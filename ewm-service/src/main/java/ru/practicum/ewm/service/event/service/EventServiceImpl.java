@@ -24,14 +24,15 @@ import ru.practicum.ewm.service.adapter.EventStatsAdapter;
 import ru.practicum.ewm.service.event.utility.ResourceReference;
 import ru.practicum.ewm.service.exception.ConflictException;
 import ru.practicum.ewm.service.exception.NotFoundException;
+import ru.practicum.ewm.service.request.command.RequestCommandService;
+import ru.practicum.ewm.service.request.command.RequestStatusUpdateCommand;
+import ru.practicum.ewm.service.request.command.RequestStatusUpdateResult;
 import ru.practicum.ewm.service.request.dto.ParticipationRequestDto;
-import ru.practicum.ewm.service.request.model.Request;
 import ru.practicum.ewm.service.request.model.RequestStatus;
 import ru.practicum.ewm.service.request.query.RequestQuery;
 import ru.practicum.ewm.service.user.model.User;
 import ru.practicum.ewm.service.user.query.UserQuery;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -46,6 +47,8 @@ public class EventServiceImpl implements EventService {
     private final CategoryQuery categoryQuery;
     private final RequestQuery requestQuery;
     private final EventQuery eventQuery;
+
+    private final RequestCommandService requestCommandService;
 
     private final EventStatsAdapter eventStatsAdapter;
 
@@ -97,21 +100,15 @@ public class EventServiceImpl implements EventService {
         Event event = eventQuery.findEvent(resourceReference.eventId());
         checkInitiator(event.getInitiator().getId(), resourceReference.userId());
 
-        List<Request> requests = requestQuery.findRequestsByIdsAndEventId(statusUpdateRequestDto.getRequestIds(),
-                resourceReference.eventId());
+        RequestStatusUpdateCommand command = new RequestStatusUpdateCommand(
+                resourceReference.eventId(),
+                statusUpdateRequestDto.getRequestIds(),
+                statusUpdateRequestDto.getStatus(),
+                event.getParticipantLimit()
+        );
+        RequestStatusUpdateResult updateResult = requestCommandService.updateRequestsStatuses(command);
 
-        // TODO: ОБЯЗАТЕЛЬНО ЧТОБЫ ПРИ СОЗДАНИИ ЗАЯВКИ ЕСЛИ ЛИМИТ = 0 ИЛИ МОДЕРАЦИЯ = false ТО ЗЯВКА СРАЗУ CONFIRMED
-
-        checkRequestsStatus(requests);
-        long currentConfirmed = countCurrentConfirmedAndCheckRequestLimit(resourceReference.eventId(),
-                statusUpdateRequestDto.getStatus(), event.getParticipantLimit());
-
-        List<Request> confirmedRequests = new ArrayList<>();
-        List<Request> rejectedRequests = new ArrayList<>();
-        processRequests(requests, confirmedRequests, rejectedRequests, statusUpdateRequestDto, currentConfirmed,
-                event.getParticipantLimit(), event.getId());
-
-        return EventMapper.toEventRequestStatusUpdateResult(confirmedRequests, rejectedRequests);
+        return EventMapper.toEventRequestStatusUpdateResult(updateResult);
     }
 
     @Override
@@ -216,65 +213,6 @@ public class EventServiceImpl implements EventService {
         switch (stateAction) {
             case SEND_TO_REVIEW -> event.setState(EventState.PENDING);
             case CANCEL_REVIEW -> event.setState(EventState.CANCELED);
-        }
-    }
-
-    private void checkRequestsStatus(List<Request> requests) {
-        if (requests.stream()
-                .anyMatch(request -> request.getStatus() != RequestStatus.PENDING)
-        ) {
-            throw new ConflictException("Изменять статус можно только у заявки со статусом " + RequestStatus.PENDING);
-        }
-    }
-
-    private long countCurrentConfirmedAndCheckRequestLimit(Long eventId, RequestStatus status, Integer limit) {
-        long confirmedCount = requestQuery.countRequestsByEventIdAndStatus(eventId, RequestStatus.CONFIRMED);
-
-        if (status == RequestStatus.CONFIRMED && limit > 0 && confirmedCount >= limit) {
-            throw new ConflictException("Достигнут лимит подтвержденный заявок на участие в событии с id = " + eventId);
-        }
-
-        return confirmedCount;
-    }
-
-    private void processRequests(List<Request> requests,
-                                 List<Request> confirmedRequests,
-                                 List<Request> rejectedRequests,
-                                 EventRequestStatusUpdateRequest statusUpdateRequestDto,
-                                 long currentConfirmed,
-                                 int limit,
-                                 Long eventId) {
-        if (statusUpdateRequestDto.getStatus() == RequestStatus.CONFIRMED) {
-            for (Request request : requests) {
-                if (limit > 0 && currentConfirmed >= limit) {
-                    request.setStatus(RequestStatus.REJECTED);
-                    rejectedRequests.add(request);
-                } else {
-                    request.setStatus(RequestStatus.CONFIRMED);
-                    confirmedRequests.add(request);
-                    currentConfirmed++;
-                }
-            }
-
-            rejectRemainingRequests(limit, currentConfirmed, eventId, rejectedRequests,
-                    statusUpdateRequestDto.getRequestIds());
-        } else {
-            requests.forEach(request -> {
-                request.setStatus(RequestStatus.REJECTED);
-                rejectedRequests.add(request);
-            });
-        }
-    }
-
-    private void rejectRemainingRequests(int limit, long currentConfirmed, Long eventId,
-                                         List<Request> rejectedRequests, List<Long> requestIds) {
-        if (limit > 0 && currentConfirmed >= limit) {
-            requestQuery.findRequestsByEventIdAndStatus(eventId, RequestStatus.PENDING).stream()
-                    .filter(request -> !requestIds.contains(request.getId()))
-                    .forEach(request -> {
-                        request.setStatus(RequestStatus.REJECTED);
-                        rejectedRequests.add(request);
-                    });
         }
     }
 

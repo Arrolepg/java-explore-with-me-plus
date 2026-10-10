@@ -6,7 +6,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import ru.practicum.ewm.service.event.model.Event;
-import ru.practicum.ewm.service.exception.NotFoundException;
 import ru.practicum.ewm.service.request.dto.ParticipationRequestDto;
 import ru.practicum.ewm.service.request.model.Request;
 import ru.practicum.ewm.service.request.model.RequestStatus;
@@ -19,7 +18,6 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,7 +34,7 @@ public class RequestQueryImplUnitTest {
 
     @Test
     void testFindRequests() {
-        Request request = createRequest(REQUEST_ID, EVENT_ID, USER_ID, RequestStatus.PENDING);
+        Request request = createRequest();
         when(requestRepository.findRequestsByEventId(EVENT_ID)).thenReturn(List.of(request));
 
         List<ParticipationRequestDto> result = requestQuery.findRequests(EVENT_ID);
@@ -63,33 +61,6 @@ public class RequestQueryImplUnitTest {
     }
 
     @Test
-    void testFindRequestsByIdsAndEventId() {
-        Request request = createRequest(REQUEST_ID, EVENT_ID, USER_ID, RequestStatus.PENDING);
-        when(requestRepository.findRequestsByIdInAndEventId(List.of(REQUEST_ID), EVENT_ID))
-                .thenReturn(List.of(request));
-
-        List<Request> result = requestQuery.findRequestsByIdsAndEventId(List.of(REQUEST_ID), EVENT_ID);
-
-        assertThat(result).hasSize(1);
-        assertThat(result.getFirst().getId()).isEqualTo(REQUEST_ID);
-
-        verify(requestRepository, times(1)).findRequestsByIdInAndEventId(List.of(REQUEST_ID), EVENT_ID);
-        verifyNoMoreInteractions(requestRepository);
-    }
-
-    @Test
-    void testFindRequestsByIdsAndEventIdNotFound() {
-        when(requestRepository.findRequestsByIdInAndEventId(List.of(REQUEST_ID), EVENT_ID))
-                .thenReturn(List.of());
-
-        assertThatThrownBy(() -> requestQuery.findRequestsByIdsAndEventId(List.of(REQUEST_ID), EVENT_ID))
-                .isInstanceOf(NotFoundException.class);
-
-        verify(requestRepository, times(1)).findRequestsByIdInAndEventId(List.of(REQUEST_ID), EVENT_ID);
-        verifyNoMoreInteractions(requestRepository);
-    }
-
-    @Test
     void testCountRequestsByEventIdAndStatus() {
         when(requestRepository.countRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.CONFIRMED))
                 .thenReturn(5L);
@@ -100,21 +71,6 @@ public class RequestQueryImplUnitTest {
 
         verify(requestRepository, times(1))
                 .countRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.CONFIRMED);
-        verifyNoMoreInteractions(requestRepository);
-    }
-
-    @Test
-    void testFindRequestsByEventIdAndStatus() {
-        Request request = createRequest(REQUEST_ID, EVENT_ID, USER_ID, RequestStatus.PENDING);
-        when(requestRepository.findRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.PENDING))
-                .thenReturn(List.of(request));
-
-        List<Request> result = requestQuery.findRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.PENDING);
-
-        assertThat(result).hasSize(1);
-
-        verify(requestRepository, times(1))
-                .findRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.PENDING);
         verifyNoMoreInteractions(requestRepository);
     }
 
@@ -155,18 +111,18 @@ public class RequestQueryImplUnitTest {
         verifyNoMoreInteractions(requestRepository);
     }
 
-    private Request createRequest(Long id, Long eventId, Long requesterId, RequestStatus status) {
+    private Request createRequest() {
         User requester = new User();
-        requester.setId(requesterId);
+        requester.setId(USER_ID);
 
         Event event = new Event();
-        event.setId(eventId);
+        event.setId(EVENT_ID);
 
         Request request = new Request();
-        request.setId(id);
+        request.setId(REQUEST_ID);
         request.setEvent(event);
         request.setRequester(requester);
-        request.setStatus(status);
+        request.setStatus(RequestStatus.PENDING);
         request.setCreated(LocalDateTime.now());
         return request;
     }

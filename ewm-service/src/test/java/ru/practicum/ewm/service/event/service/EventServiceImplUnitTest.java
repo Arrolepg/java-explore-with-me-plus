@@ -2,6 +2,7 @@ package ru.practicum.ewm.service.event.service;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -26,8 +27,10 @@ import ru.practicum.ewm.service.adapter.EventStatsAdapter;
 import ru.practicum.ewm.service.event.utility.ResourceReference;
 import ru.practicum.ewm.service.exception.ConflictException;
 import ru.practicum.ewm.service.exception.NotFoundException;
+import ru.practicum.ewm.service.request.command.RequestCommandService;
+import ru.practicum.ewm.service.request.command.RequestStatusUpdateCommand;
+import ru.practicum.ewm.service.request.command.RequestStatusUpdateResult;
 import ru.practicum.ewm.service.request.dto.ParticipationRequestDto;
-import ru.practicum.ewm.service.request.model.Request;
 import ru.practicum.ewm.service.request.model.RequestStatus;
 import ru.practicum.ewm.service.request.query.RequestQuery;
 import ru.practicum.ewm.service.user.model.User;
@@ -72,13 +75,16 @@ public class EventServiceImplUnitTest {
     @Mock
     private EventQuery eventQuery;
 
+    @Mock
+    private RequestCommandService requestCommandService;
+
     @InjectMocks
     private EventServiceImpl eventService;
 
     @Test
     void testCreate() {
         User initiator = createUser(USER_ID);
-        Category category = createCategory(CATEGORY_ID);
+        Category category = createCategory();
         when(userQuery.findUser(USER_ID)).thenReturn(initiator);
         when(categoryQuery.findCategory(CATEGORY_ID)).thenReturn(category);
         when(eventRepository.save(any(Event.class))).thenAnswer(inv -> {
@@ -95,7 +101,7 @@ public class EventServiceImplUnitTest {
         verify(userQuery, times(1)).findUser(USER_ID);
         verify(categoryQuery, times(1)).findCategory(CATEGORY_ID);
         verify(eventRepository, times(1)).save(any(Event.class));
-        verifyNoInteractions(requestQuery, eventStatsAdapter);
+        verifyNoInteractions(requestQuery, eventStatsAdapter, requestCommandService);
     }
 
     @Test
@@ -112,7 +118,7 @@ public class EventServiceImplUnitTest {
     @Test
     void testUpdate() {
         Event event = createEvent(EVENT_ID, USER_ID, EventState.PENDING);
-        Category category = createCategory(CATEGORY_ID);
+        Category category = createCategory();
         when(eventRepository.findByIdWithFetch(EVENT_ID)).thenReturn(Optional.of(event));
         when(categoryQuery.findCategory(CATEGORY_ID)).thenReturn(category);
         when(requestQuery.countRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.CONFIRMED)).thenReturn(5L);
@@ -182,7 +188,7 @@ public class EventServiceImplUnitTest {
     @Test
     void testUpdateWithStateActionCancelReview() {
         Event event = createEvent(EVENT_ID, USER_ID, EventState.PENDING);
-        Category category = createCategory(CATEGORY_ID);
+        Category category = createCategory();
         when(eventRepository.findByIdWithFetch(EVENT_ID)).thenReturn(Optional.of(event));
         when(categoryQuery.findCategory(CATEGORY_ID)).thenReturn(category);
         when(requestQuery.countRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.CONFIRMED)).thenReturn(0L);
@@ -246,77 +252,36 @@ public class EventServiceImplUnitTest {
     }
 
     @Test
-    void testUpdateRequestsConfirmed() {
+    void testUpdateRequestDelegatesToCommandService() {
         Event event = createEvent(EVENT_ID, USER_ID, EventState.PENDING);
         event.setParticipantLimit(10);
-        Request request = createRequest(REQUEST_ID, RequestStatus.PENDING);
         when(eventQuery.findEvent(EVENT_ID)).thenReturn(event);
-        when(requestQuery.findRequestsByIdsAndEventId(List.of(REQUEST_ID), EVENT_ID))
-                .thenReturn(List.of(request));
-        when(requestQuery.countRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.CONFIRMED))
-                .thenReturn(0L);
 
-        EventRequestStatusUpdateRequest dto = createStatusUpdateRequest(RequestStatus.CONFIRMED);
-        EventRequestStatusUpdateResult result = eventService.updateRequests(
-                new ResourceReference(USER_ID, EVENT_ID), dto);
+        ParticipationRequestDto requestDto = createParticipationRequestDto();
+        RequestStatusUpdateResult result = new RequestStatusUpdateResult(List.of(requestDto), List.of());
+        when(requestCommandService.updateRequestsStatuses(any(RequestStatusUpdateCommand.class)))
+                .thenReturn(result);
 
-        assertThat(result.getConfirmedRequests()).hasSize(1);
-        assertThat(result.getRejectedRequests()).isEmpty();
-        assertThat(request.getStatus()).isEqualTo(RequestStatus.CONFIRMED);
-    }
+        EventRequestStatusUpdateRequest updateRequest = createStatusUpdateRequest();
+        EventRequestStatusUpdateResult updateResult = eventService.updateRequests(
+                new ResourceReference(USER_ID, EVENT_ID),
+                updateRequest
+        );
 
-    @Test
-    void testUpdateRequestsRejected() {
-        Event event = createEvent(EVENT_ID, USER_ID, EventState.PENDING);
-        event.setParticipantLimit(10);
-        Request request = createRequest(REQUEST_ID, RequestStatus.PENDING);
-        when(eventQuery.findEvent(EVENT_ID)).thenReturn(event);
-        when(requestQuery.findRequestsByIdsAndEventId(List.of(REQUEST_ID), EVENT_ID))
-                .thenReturn(List.of(request));
-        when(requestQuery.countRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.CONFIRMED))
-                .thenReturn(0L);
+        assertThat(updateResult.getConfirmedRequests()).hasSize(1);
+        assertThat(updateResult.getRejectedRequests()).isEmpty();
 
-        EventRequestStatusUpdateRequest dto = createStatusUpdateRequest(RequestStatus.REJECTED);
-        EventRequestStatusUpdateResult result = eventService.updateRequests(
-                new ResourceReference(USER_ID, EVENT_ID), dto);
+        ArgumentCaptor<RequestStatusUpdateCommand> captor = ArgumentCaptor.forClass(RequestStatusUpdateCommand.class);
+        verify(requestCommandService, times(1)).updateRequestsStatuses(captor.capture());
 
-        assertThat(result.getRejectedRequests()).hasSize(1);
-        assertThat(result.getConfirmedRequests()).isEmpty();
-        assertThat(request.getStatus()).isEqualTo(RequestStatus.REJECTED);
-    }
+        RequestStatusUpdateCommand command = captor.getValue();
+        assertThat(command.eventId()).isEqualTo(EVENT_ID);
+        assertThat(command.requestsIds()).containsExactly(REQUEST_ID);
+        assertThat(command.requestStatus()).isEqualTo(RequestStatus.CONFIRMED);
+        assertThat(command.participantLimit()).isEqualTo(10);
 
-    @Test
-    void testUpdateRequestsNotPending() {
-        Event event = createEvent(EVENT_ID, USER_ID, EventState.PENDING);
-        event.setParticipantLimit(10);
-        Request request = createRequest(REQUEST_ID, RequestStatus.CONFIRMED);
-        when(eventQuery.findEvent(EVENT_ID)).thenReturn(event);
-        when(requestQuery.findRequestsByIdsAndEventId(List.of(REQUEST_ID), EVENT_ID))
-                .thenReturn(List.of(request));
-
-        EventRequestStatusUpdateRequest dto = createStatusUpdateRequest(RequestStatus.CONFIRMED);
-
-        assertThatThrownBy(() -> eventService.updateRequests(
-                new ResourceReference(USER_ID, EVENT_ID), dto))
-                .isInstanceOf(ConflictException.class);
-    }
-
-    @Test
-    void testUpdateRequestsLimitReached() {
-        Event event = createEvent(EVENT_ID, USER_ID, EventState.PENDING);
-        event.setParticipantLimit(5);
-        Request request = createRequest(REQUEST_ID, RequestStatus.PENDING);
-        when(eventQuery.findEvent(EVENT_ID)).thenReturn(event);
-        when(requestQuery.findRequestsByIdsAndEventId(List.of(REQUEST_ID), EVENT_ID))
-                .thenReturn(List.of(request));
-        when(requestQuery.countRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.CONFIRMED))
-                .thenReturn(5L);
-
-        EventRequestStatusUpdateRequest dto = createStatusUpdateRequest(RequestStatus.CONFIRMED);
-
-        assertThatThrownBy(() -> eventService.updateRequests(
-                new ResourceReference(USER_ID, EVENT_ID), dto))
-                .isInstanceOf(ConflictException.class);
+        verify(userQuery, times(1)).checkUserExists(USER_ID);
+        verify(eventQuery, times(1)).findEvent(EVENT_ID);
     }
 
     @Test
@@ -324,10 +289,40 @@ public class EventServiceImplUnitTest {
         doThrow(new NotFoundException("")).when(userQuery).checkUserExists(99L);
 
         assertThatThrownBy(() -> eventService.updateRequests(
-                new ResourceReference(99L, EVENT_ID), createStatusUpdateRequest(RequestStatus.CONFIRMED)))
+                new ResourceReference(99L, EVENT_ID),
+                createStatusUpdateRequest()
+        ))
                 .isInstanceOf(NotFoundException.class);
 
         verify(eventRepository, never()).findById(any());
+        verifyNoInteractions(requestCommandService);
+    }
+
+    @Test
+    void testUpdateRequestsEventNotFound() {
+        when(eventQuery.findEvent(99L)).thenThrow(new NotFoundException(""));
+
+        assertThatThrownBy(() -> eventService.updateRequests(
+                new ResourceReference(USER_ID, 99L),
+                createStatusUpdateRequest()
+        ))
+                .isInstanceOf(NotFoundException.class);
+
+        verifyNoInteractions(requestCommandService);
+    }
+
+    @Test
+    void testUpdateRequestNotInitiator() {
+        Event event = createEvent(EVENT_ID, OTHER_USER_ID, EventState.PENDING);
+        when(eventQuery.findEvent(EVENT_ID)).thenReturn(event);
+
+        assertThatThrownBy(() -> eventService.updateRequests(
+                new ResourceReference(USER_ID, EVENT_ID),
+                createStatusUpdateRequest()
+        ))
+                .isInstanceOf(ConflictException.class);
+
+        verifyNoInteractions(requestCommandService);
     }
 
     @Test
@@ -430,7 +425,7 @@ public class EventServiceImplUnitTest {
     @Test
     void testUpdateLocationBothFields() {
         Event event = createEvent(EVENT_ID, USER_ID, EventState.PENDING);
-        Category category = createCategory(CATEGORY_ID);
+        Category category = createCategory();
         when(eventRepository.findByIdWithFetch(EVENT_ID)).thenReturn(Optional.of(event));
         when(categoryQuery.findCategory(CATEGORY_ID)).thenReturn(category);
         when(requestQuery.countRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.CONFIRMED)).thenReturn(0L);
@@ -452,7 +447,7 @@ public class EventServiceImplUnitTest {
     void testUpdateLocationOnlyLat() {
         Event event = createEvent(EVENT_ID, USER_ID, EventState.PENDING);
         Float oldLon = event.getEventLocation().getLon();
-        Category category = createCategory(CATEGORY_ID);
+        Category category = createCategory();
         when(eventRepository.findByIdWithFetch(EVENT_ID)).thenReturn(Optional.of(event));
         when(categoryQuery.findCategory(CATEGORY_ID)).thenReturn(category);
         when(requestQuery.countRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.CONFIRMED)).thenReturn(0L);
@@ -474,7 +469,7 @@ public class EventServiceImplUnitTest {
     void testUpdateLocationOnlyLon() {
         Event event = createEvent(EVENT_ID, USER_ID, EventState.PENDING);
         Float oldLat = event.getEventLocation().getLat();
-        Category category = createCategory(CATEGORY_ID);
+        Category category = createCategory();
         when(eventRepository.findByIdWithFetch(EVENT_ID)).thenReturn(Optional.of(event));
         when(categoryQuery.findCategory(CATEGORY_ID)).thenReturn(category);
         when(requestQuery.countRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.CONFIRMED)).thenReturn(0L);
@@ -497,7 +492,7 @@ public class EventServiceImplUnitTest {
         Event event = createEvent(EVENT_ID, USER_ID, EventState.PENDING);
         Float oldLat = event.getEventLocation().getLat();
         Float oldLon = event.getEventLocation().getLon();
-        Category category = createCategory(CATEGORY_ID);
+        Category category = createCategory();
         when(eventRepository.findByIdWithFetch(EVENT_ID)).thenReturn(Optional.of(event));
         when(categoryQuery.findCategory(CATEGORY_ID)).thenReturn(category);
         when(requestQuery.countRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.CONFIRMED)).thenReturn(0L);
@@ -523,9 +518,9 @@ public class EventServiceImplUnitTest {
         return user;
     }
 
-    private Category createCategory(Long id) {
+    private Category createCategory() {
         Category category = new Category();
-        category.setId(id);
+        category.setId(CATEGORY_ID);
         category.setName("Category");
         return category;
     }
@@ -534,7 +529,7 @@ public class EventServiceImplUnitTest {
         return Event.builder()
                 .id(id)
                 .annotation(ANNOTATION)
-                .category(createCategory(CATEGORY_ID))
+                .category(createCategory())
                 .description(DESCRIPTION)
                 .eventDate(LocalDateTime.now().plusDays(10))
                 .eventLocation(EventLocation.builder().lat(55.75f).lon(37.62f).build())
@@ -546,16 +541,6 @@ public class EventServiceImplUnitTest {
                 .createdOn(LocalDateTime.now())
                 .initiator(createUser(initiatorId))
                 .build();
-    }
-
-    private Request createRequest(Long id, RequestStatus status) {
-        Request request = new Request();
-        request.setId(id);
-        request.setEvent(createEvent(EVENT_ID, USER_ID, EventState.PENDING));
-        request.setRequester(createUser(OTHER_USER_ID));
-        request.setStatus(status);
-        request.setCreated(LocalDateTime.now());
-        return request;
     }
 
     private ParticipationRequestDto createParticipationRequestDto() {
@@ -597,10 +582,10 @@ public class EventServiceImplUnitTest {
         return dto;
     }
 
-    private EventRequestStatusUpdateRequest createStatusUpdateRequest(RequestStatus status) {
+    private EventRequestStatusUpdateRequest createStatusUpdateRequest() {
         EventRequestStatusUpdateRequest dto = new EventRequestStatusUpdateRequest();
         dto.setRequestIds(List.of(REQUEST_ID));
-        dto.setStatus(status);
+        dto.setStatus(RequestStatus.CONFIRMED);
         return dto;
     }
 }
