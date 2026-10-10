@@ -7,7 +7,6 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.util.UriComponentsBuilder;
 import ru.practicum.common.error.ApiError;
 import ru.practicum.common.util.PatternDataTime;
 import ru.practicum.stats.client.exception.StatsClientException;
@@ -16,7 +15,6 @@ import ru.practicum.stats.dto.request.EndpointHitDto;
 import ru.practicum.stats.dto.response.ViewStatsDto;
 
 import java.io.IOException;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -40,17 +38,14 @@ public class StatsClient {
     }
 
     public ResponseEntity<List<ViewStatsDto>> get(ParamDto dto) {
-        URI uri = UriComponentsBuilder.newInstance()
-                .path("/stats")
-                .queryParam("start", dto.getStart().format(FORMATTER))
-                .queryParam("end", dto.getEnd().format(FORMATTER))
-                .queryParam("uris", dto.getUris())
-                .queryParam("unique", dto.getUnique())
-                .build()
-                .toUri();
-
         return restClient.get()
-                .uri(uri)
+                .uri(uriBuilder -> uriBuilder
+                        .path("/stats")
+                        .queryParam("start", dto.getStart().format(FORMATTER))
+                        .queryParam("end", dto.getEnd().format(FORMATTER))
+                        .queryParam("uris", dto.getUris())
+                        .queryParam("unique", dto.getUnique())
+                        .build())
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError, this::handle4xx)
                 .onStatus(HttpStatusCode::is5xxServerError, this::handle5xx)
