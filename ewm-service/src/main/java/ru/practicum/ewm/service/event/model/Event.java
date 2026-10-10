@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "event")
+@EqualsAndHashCode(of = "id")
 public class Event {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -57,19 +58,6 @@ public class Event {
     @JoinColumn(name = "initiator_id")
     @ToString.Exclude
     private User initiator;
-
-    @Override
-    public final boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof Event)) return false;
-
-        return id != null && id.equals(((Event) o).getId());
-    }
-
-    @Override
-    public final int hashCode() {
-        return id != null ? id.hashCode() : getClass().hashCode();
-    }
 
     @PrePersist
     void applyDefaults() {

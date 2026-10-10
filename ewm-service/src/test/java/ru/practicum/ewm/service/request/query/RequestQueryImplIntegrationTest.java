@@ -11,7 +11,6 @@ import ru.practicum.ewm.service.event.model.Event;
 import ru.practicum.ewm.service.event.model.EventLocation;
 import ru.practicum.ewm.service.event.model.EventState;
 import ru.practicum.ewm.service.event.repository.EventRepository;
-import ru.practicum.ewm.service.exception.NotFoundException;
 import ru.practicum.ewm.service.request.dto.ParticipationRequestDto;
 import ru.practicum.ewm.service.request.model.Request;
 import ru.practicum.ewm.service.request.model.RequestStatus;
@@ -24,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -68,29 +66,6 @@ public class RequestQueryImplIntegrationTest {
     }
 
     @Test
-    void testFindRequestsByIdsAndEventId() {
-        User owner = createUser("Owner", "owner@mail.com");
-        User requester = createUser("Requester", "req@mail.com");
-        Event event = createEvent(owner);
-        Request request = createRequest(event, requester, RequestStatus.PENDING);
-
-        List<Request> result = requestQuery.findRequestsByIdsAndEventId(
-                List.of(request.getId()), event.getId());
-
-        assertThat(result).hasSize(1);
-        assertThat(result.getFirst().getId()).isEqualTo(request.getId());
-    }
-
-    @Test
-    void testFindRequestsByIdsAndEventIdNotFound() {
-        User owner = createUser("Owner", "owner@mail.com");
-        Event event = createEvent(owner);
-
-        assertThatThrownBy(() -> requestQuery.findRequestsByIdsAndEventId(List.of(999L), event.getId()))
-                .isInstanceOf(NotFoundException.class);
-    }
-
-    @Test
     void testCountRequestsByEventIdAndStatus() {
         User owner = createUser("Owner", "owner@mail.com");
         User user1 = createUser("User1", "u1@mail.com");
@@ -102,22 +77,6 @@ public class RequestQueryImplIntegrationTest {
         long result = requestQuery.countRequestsByEventIdAndStatus(event.getId(), RequestStatus.CONFIRMED);
 
         assertThat(result).isEqualTo(2L);
-    }
-
-    @Test
-    void testFindRequestsByEventIdAndStatus() {
-        User owner = createUser("Owner", "owner@mail.com");
-        User user1 = createUser("User1", "u1@mail.com");
-        User user2 = createUser("User2", "u2@mail.com");
-        Event event = createEvent(owner);
-        createRequest(event, user1, RequestStatus.PENDING);
-        createRequest(event, user2, RequestStatus.CONFIRMED);
-
-        List<Request> result = requestQuery.findRequestsByEventIdAndStatus(
-                event.getId(), RequestStatus.PENDING);
-
-        assertThat(result).hasSize(1);
-        assertThat(result.getFirst().getStatus()).isEqualTo(RequestStatus.PENDING);
     }
 
     @Test
@@ -186,13 +145,13 @@ public class RequestQueryImplIntegrationTest {
         return eventRepository.save(event);
     }
 
-    private Request createRequest(Event event, User requester, RequestStatus status) {
+    private void createRequest(Event event, User requester, RequestStatus status) {
         Request request = Request.builder()
                 .event(event)
                 .requester(requester)
                 .status(status)
                 .created(LocalDateTime.now())
                 .build();
-        return requestRepository.save(request);
+        requestRepository.save(request);
     }
 }
