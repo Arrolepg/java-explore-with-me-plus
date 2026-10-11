@@ -15,7 +15,7 @@ import ru.practicum.common.util.PatternDataTime;
 import ru.practicum.ewm.service.event.dto.request.UpdateEventAdminRequest;
 import ru.practicum.ewm.service.event.dto.response.EventFullDto;
 import ru.practicum.ewm.service.event.model.EventState;
-import ru.practicum.ewm.service.event.service.AdminEventService;
+import ru.practicum.ewm.service.event.service.EventService;
 import ru.practicum.ewm.service.event.utility.AdminEventSearchRequest;
 
 import java.time.LocalDateTime;
@@ -26,7 +26,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @RequestMapping(path = "/admin/events")
 public class AdminEventController {
-    private final AdminEventService adminEventService;
+    private final EventService eventService;
 
     @GetMapping
     public List<EventFullDto> findAll(
@@ -44,7 +44,7 @@ public class AdminEventController {
         AdminEventSearchRequest searchRequest = new AdminEventSearchRequest(users, states, categories,
                 rangeStart, rangeEnd, from, size);
 
-        return adminEventService.findAll(searchRequest);
+        return eventService.findAllByAdmin(searchRequest);
     }
 
     @PatchMapping("/{eventId}")
@@ -52,6 +52,6 @@ public class AdminEventController {
                                @Valid @RequestBody UpdateEventAdminRequest eventDto) {
         log.info("Получен запрос администратора на редактирование события с id = {}", eventId);
 
-        return adminEventService.update(eventId, eventDto);
+        return eventService.updateByAdmin(eventId, eventDto);
     }
 }

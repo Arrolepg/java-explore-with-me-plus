@@ -13,7 +13,7 @@ import ru.practicum.ewm.service.event.model.AdminEventStateAction;
 import java.time.LocalDateTime;
 
 @Data
-public class UpdateEventAdminRequest {
+public class UpdateEventAdminRequest implements UpdateEventRequest {
     @Size(min = 20, max = 2000, message = "Минимальная длина краткого описания события - 20 символов. " +
             "Максимальная длина краткого описания события - 2000 символов")
     private String annotation;

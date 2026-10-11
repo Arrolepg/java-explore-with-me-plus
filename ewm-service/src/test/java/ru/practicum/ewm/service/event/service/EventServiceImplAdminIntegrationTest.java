@@ -34,11 +34,11 @@ import static org.mockito.Mockito.when;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
-public class AdminEventServiceImplIntegrationTest {
+public class EventServiceImplAdminIntegrationTest {
     private static final LocalDateTime BASE_DATE = LocalDateTime.now().plusDays(30).withNano(0);
 
     @Autowired
-    private AdminEventService adminEventService;
+    private EventService eventService;
 
     @Autowired
     private EventRepository eventRepository;
@@ -77,7 +77,7 @@ public class AdminEventServiceImplIntegrationTest {
 
     @Test
     void testFindAllWithoutFilters() {
-        List<EventFullDto> result = adminEventService.findAll(search(null, null, null, null, null));
+        List<EventFullDto> result = eventService.findAllByAdmin(search(null, null, null, null, null));
 
         assertThat(result).extracting(EventFullDto::getId)
                 .containsExactly(alicePendingConcert.getId(), alicePublishedTheatre.getId(),
@@ -86,14 +86,14 @@ public class AdminEventServiceImplIntegrationTest {
 
     @Test
     void testFindAllByUsers() {
-        List<EventFullDto> result = adminEventService.findAll(search(List.of(bob.getId()), null, null, null, null));
+        List<EventFullDto> result = eventService.findAllByAdmin(search(List.of(bob.getId()), null, null, null, null));
 
         assertThat(result).extracting(EventFullDto::getId).containsExactly(bobCanceledConcert.getId());
     }
 
     @Test
     void testFindAllByStates() {
-        List<EventFullDto> result = adminEventService.findAll(
+        List<EventFullDto> result = eventService.findAllByAdmin(
                 search(null, List.of(EventState.PENDING, EventState.CANCELED), null, null, null));
 
         assertThat(result).extracting(EventFullDto::getId)
@@ -102,7 +102,7 @@ public class AdminEventServiceImplIntegrationTest {
 
     @Test
     void testFindAllByCategories() {
-        List<EventFullDto> result = adminEventService.findAll(
+        List<EventFullDto> result = eventService.findAllByAdmin(
                 search(null, null, List.of(theatre.getId()), null, null));
 
         assertThat(result).extracting(EventFullDto::getId).containsExactly(alicePublishedTheatre.getId());
@@ -110,7 +110,7 @@ public class AdminEventServiceImplIntegrationTest {
 
     @Test
     void testFindAllByDateRange() {
-        List<EventFullDto> result = adminEventService.findAll(
+        List<EventFullDto> result = eventService.findAllByAdmin(
                 search(null, null, null, BASE_DATE.plusDays(5), BASE_DATE.plusDays(15)));
 
         assertThat(result).extracting(EventFullDto::getId).containsExactly(alicePublishedTheatre.getId());
@@ -118,7 +118,7 @@ public class AdminEventServiceImplIntegrationTest {
 
     @Test
     void testFindAllWithCombinedFilters() {
-        List<EventFullDto> result = adminEventService.findAll(
+        List<EventFullDto> result = eventService.findAllByAdmin(
                 search(List.of(alice.getId()), List.of(EventState.PENDING), List.of(concerts.getId()),
                         BASE_DATE.minusDays(1), BASE_DATE.plusDays(1)));
 
@@ -127,15 +127,24 @@ public class AdminEventServiceImplIntegrationTest {
 
     @Test
     void testFindAllWithPagination() {
-        List<EventFullDto> result = adminEventService.findAll(
+        List<EventFullDto> result = eventService.findAllByAdmin(
                 new AdminEventSearchRequest(null, null, null, null, null, 2, 2));
 
         assertThat(result).extracting(EventFullDto::getId).containsExactly(bobCanceledConcert.getId());
     }
 
     @Test
+    void testFindAllWithOffsetNotMultipleOfSize() {
+        List<EventFullDto> result = eventService.findAllByAdmin(
+                new AdminEventSearchRequest(null, null, null, null, null, 1, 2));
+
+        assertThat(result).extracting(EventFullDto::getId)
+                .containsExactly(alicePublishedTheatre.getId(), bobCanceledConcert.getId());
+    }
+
+    @Test
     void testFindAllReturnsCategoryAndInitiator() {
-        List<EventFullDto> result = adminEventService.findAll(
+        List<EventFullDto> result = eventService.findAllByAdmin(
                 search(List.of(bob.getId()), null, null, null, null));
 
         assertAll(
@@ -150,7 +159,7 @@ public class AdminEventServiceImplIntegrationTest {
         request.setStateAction(AdminEventStateAction.PUBLISH_EVENT);
         request.setTitle("Published title");
 
-        adminEventService.update(alicePendingConcert.getId(), request);
+        eventService.updateByAdmin(alicePendingConcert.getId(), request);
         eventRepository.flush();
 
         Event saved = eventRepository.findById(alicePendingConcert.getId()).orElseThrow();

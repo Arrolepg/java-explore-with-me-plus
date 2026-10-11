@@ -5,10 +5,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
 import ru.practicum.ewm.service.adapter.EventStatsAdapter;
 import ru.practicum.ewm.service.category.model.Category;
 import ru.practicum.ewm.service.category.query.CategoryQuery;
@@ -19,14 +15,17 @@ import ru.practicum.ewm.service.event.model.AdminEventStateAction;
 import ru.practicum.ewm.service.event.model.Event;
 import ru.practicum.ewm.service.event.model.EventLocation;
 import ru.practicum.ewm.service.event.model.EventState;
+import ru.practicum.ewm.service.event.query.EventQuery;
 import ru.practicum.ewm.service.event.repository.EventRepository;
 import ru.practicum.ewm.service.event.utility.AdminEventSearchRequest;
 import ru.practicum.ewm.service.exception.BadRequestException;
 import ru.practicum.ewm.service.exception.ConflictException;
 import ru.practicum.ewm.service.exception.NotFoundException;
+import ru.practicum.ewm.service.request.command.RequestCommandService;
 import ru.practicum.ewm.service.request.model.RequestStatus;
 import ru.practicum.ewm.service.request.query.RequestQuery;
 import ru.practicum.ewm.service.user.model.User;
+import ru.practicum.ewm.service.user.query.UserQuery;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -37,10 +36,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class AdminEventServiceImplUnitTest {
+public class EventServiceImplAdminUnitTest {
     private static final Long EVENT_ID = 1L;
 
     @Mock
@@ -55,19 +56,27 @@ public class AdminEventServiceImplUnitTest {
     @Mock
     private EventStatsAdapter eventStatsAdapter;
 
+    @Mock
+    private UserQuery userQuery;
+
+    @Mock
+    private EventQuery eventQuery;
+
+    @Mock
+    private RequestCommandService requestCommandService;
+
     @InjectMocks
-    private AdminEventServiceImpl adminEventService;
+    private EventServiceImpl eventService;
 
     @Test
     void testFindAllReturnsEventsWithRequestsAndViews() {
         Event event = createEvent(EventState.PUBLISHED, LocalDateTime.now().plusDays(5));
-        Page<Event> page = new PageImpl<>(List.of(event));
-        when(eventRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+        when(eventRepository.findAllWithFetch(any(), eq(0), eq(10))).thenReturn(List.of(event));
         when(requestQuery.countRequestsByEventIdsAndStatus(List.of(EVENT_ID), RequestStatus.CONFIRMED))
                 .thenReturn(Map.of(EVENT_ID, 3L));
         when(eventStatsAdapter.getViews(List.of(event))).thenReturn(Map.of(EVENT_ID, 7L));
 
-        List<EventFullDto> result = adminEventService.findAll(searchRequest(0, 10));
+        List<EventFullDto> result = eventService.findAllByAdmin(searchRequest(0, 10));
 
         assertThat(result).hasSize(1);
         assertAll(
@@ -79,9 +88,9 @@ public class AdminEventServiceImplUnitTest {
 
     @Test
     void testFindAllEmptyDoesNotRequestStatsAndRequests() {
-        when(eventRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
+        when(eventRepository.findAllWithFetch(any(), anyInt(), anyInt())).thenReturn(List.of());
 
-        List<EventFullDto> result = adminEventService.findAll(searchRequest(0, 10));
+        List<EventFullDto> result = eventService.findAllByAdmin(searchRequest(0, 10));
 
         assertThat(result).isEmpty();
         verifyNoInteractions(requestQuery, eventStatsAdapter);
@@ -89,14 +98,14 @@ public class AdminEventServiceImplUnitTest {
 
     @Test
     void testFindAllWithNegativeFromThrowsBadRequest() {
-        assertThatThrownBy(() -> adminEventService.findAll(searchRequest(-1, 10)))
+        assertThatThrownBy(() -> eventService.findAllByAdmin(searchRequest(-1, 10)))
                 .isInstanceOf(BadRequestException.class);
         verifyNoInteractions(eventRepository);
     }
 
     @Test
     void testFindAllWithZeroSizeThrowsBadRequest() {
-        assertThatThrownBy(() -> adminEventService.findAll(searchRequest(0, 0)))
+        assertThatThrownBy(() -> eventService.findAllByAdmin(searchRequest(0, 0)))
                 .isInstanceOf(BadRequestException.class);
         verifyNoInteractions(eventRepository);
     }
@@ -106,7 +115,7 @@ public class AdminEventServiceImplUnitTest {
         AdminEventSearchRequest request = new AdminEventSearchRequest(null, null, null,
                 LocalDateTime.of(2031, 1, 1, 0, 0), LocalDateTime.of(2030, 1, 1, 0, 0), 0, 10);
 
-        assertThatThrownBy(() -> adminEventService.findAll(request))
+        assertThatThrownBy(() -> eventService.findAllByAdmin(request))
                 .isInstanceOf(BadRequestException.class);
         verifyNoInteractions(eventRepository);
     }
@@ -115,7 +124,7 @@ public class AdminEventServiceImplUnitTest {
     void testUpdateNotFound() {
         when(eventRepository.findByIdWithFetch(EVENT_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> adminEventService.update(EVENT_ID, new UpdateEventAdminRequest()))
+        assertThatThrownBy(() -> eventService.updateByAdmin(EVENT_ID, new UpdateEventAdminRequest()))
                 .isInstanceOf(NotFoundException.class);
     }
 
@@ -125,7 +134,7 @@ public class AdminEventServiceImplUnitTest {
         when(eventRepository.findByIdWithFetch(EVENT_ID)).thenReturn(Optional.of(event));
         stubCounters(event);
 
-        EventFullDto result = adminEventService.update(EVENT_ID, stateAction(AdminEventStateAction.PUBLISH_EVENT));
+        EventFullDto result = eventService.updateByAdmin(EVENT_ID, stateAction(AdminEventStateAction.PUBLISH_EVENT));
 
         assertAll(
                 () -> assertThat(result.getState()).isEqualTo(EventState.PUBLISHED),
@@ -139,7 +148,7 @@ public class AdminEventServiceImplUnitTest {
         Event event = createEvent(EventState.CANCELED, LocalDateTime.now().plusDays(5));
         when(eventRepository.findByIdWithFetch(EVENT_ID)).thenReturn(Optional.of(event));
 
-        assertThatThrownBy(() -> adminEventService.update(EVENT_ID, stateAction(AdminEventStateAction.PUBLISH_EVENT)))
+        assertThatThrownBy(() -> eventService.updateByAdmin(EVENT_ID, stateAction(AdminEventStateAction.PUBLISH_EVENT)))
                 .isInstanceOf(ConflictException.class);
         assertThat(event.getState()).isEqualTo(EventState.CANCELED);
     }
@@ -149,7 +158,7 @@ public class AdminEventServiceImplUnitTest {
         Event event = createEvent(EventState.PENDING, LocalDateTime.now().plusMinutes(30));
         when(eventRepository.findByIdWithFetch(EVENT_ID)).thenReturn(Optional.of(event));
 
-        assertThatThrownBy(() -> adminEventService.update(EVENT_ID, stateAction(AdminEventStateAction.PUBLISH_EVENT)))
+        assertThatThrownBy(() -> eventService.updateByAdmin(EVENT_ID, stateAction(AdminEventStateAction.PUBLISH_EVENT)))
                 .isInstanceOf(ConflictException.class);
         assertThat(event.getState()).isEqualTo(EventState.PENDING);
     }
@@ -161,7 +170,7 @@ public class AdminEventServiceImplUnitTest {
         UpdateEventAdminRequest request = stateAction(AdminEventStateAction.PUBLISH_EVENT);
         request.setEventDate(LocalDateTime.now().plusMinutes(30));
 
-        assertThatThrownBy(() -> adminEventService.update(EVENT_ID, request))
+        assertThatThrownBy(() -> eventService.updateByAdmin(EVENT_ID, request))
                 .isInstanceOf(ConflictException.class);
     }
 
@@ -171,7 +180,7 @@ public class AdminEventServiceImplUnitTest {
         when(eventRepository.findByIdWithFetch(EVENT_ID)).thenReturn(Optional.of(event));
         stubCounters(event);
 
-        EventFullDto result = adminEventService.update(EVENT_ID, stateAction(AdminEventStateAction.REJECT_EVENT));
+        EventFullDto result = eventService.updateByAdmin(EVENT_ID, stateAction(AdminEventStateAction.REJECT_EVENT));
 
         assertAll(
                 () -> assertThat(result.getState()).isEqualTo(EventState.CANCELED),
@@ -184,7 +193,7 @@ public class AdminEventServiceImplUnitTest {
         Event event = createEvent(EventState.PUBLISHED, LocalDateTime.now().plusDays(5));
         when(eventRepository.findByIdWithFetch(EVENT_ID)).thenReturn(Optional.of(event));
 
-        assertThatThrownBy(() -> adminEventService.update(EVENT_ID, stateAction(AdminEventStateAction.REJECT_EVENT)))
+        assertThatThrownBy(() -> eventService.updateByAdmin(EVENT_ID, stateAction(AdminEventStateAction.REJECT_EVENT)))
                 .isInstanceOf(ConflictException.class);
         assertThat(event.getState()).isEqualTo(EventState.PUBLISHED);
     }
@@ -205,7 +214,7 @@ public class AdminEventServiceImplUnitTest {
         location.setLat(10.5f);
         request.setLocation(location);
 
-        EventFullDto result = adminEventService.update(EVENT_ID, request);
+        EventFullDto result = eventService.updateByAdmin(EVENT_ID, request);
 
         assertAll(
                 () -> assertThat(result.getTitle()).isEqualTo("New title"),

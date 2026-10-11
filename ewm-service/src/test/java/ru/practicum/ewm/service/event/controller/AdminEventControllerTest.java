@@ -12,7 +12,7 @@ import ru.practicum.ewm.service.event.dto.request.UpdateEventAdminRequest;
 import ru.practicum.ewm.service.event.dto.response.EventFullDto;
 import ru.practicum.ewm.service.event.model.AdminEventStateAction;
 import ru.practicum.ewm.service.event.model.EventState;
-import ru.practicum.ewm.service.event.service.AdminEventService;
+import ru.practicum.ewm.service.event.service.EventService;
 import ru.practicum.ewm.service.event.utility.AdminEventSearchRequest;
 import ru.practicum.ewm.service.exception.ConflictException;
 import ru.practicum.ewm.service.exception.NotFoundException;
@@ -44,11 +44,11 @@ public class AdminEventControllerTest {
     private ObjectMapper objectMapper;
 
     @MockBean
-    private AdminEventService adminEventService;
+    private EventService eventService;
 
     @Test
     void testFindAllWithAllParams() throws Exception {
-        when(adminEventService.findAll(any(AdminEventSearchRequest.class)))
+        when(eventService.findAllByAdmin(any(AdminEventSearchRequest.class)))
                 .thenReturn(List.of(createEventFullDto(EventState.PENDING)));
 
         mockMvc.perform(get(API_PREFIX)
@@ -66,7 +66,7 @@ public class AdminEventControllerTest {
                         jsonPath("$[0].state").value("PENDING")
                 );
 
-        verify(adminEventService).findAll(argThat(request -> {
+        verify(eventService).findAllByAdmin(argThat(request -> {
             assertAll(
                     () -> assertThat(request.users()).containsExactly(1L, 2L),
                     () -> assertThat(request.states()).containsExactly(EventState.PENDING, EventState.PUBLISHED),
@@ -82,7 +82,7 @@ public class AdminEventControllerTest {
 
     @Test
     void testFindAllWithoutParamsUsesDefaults() throws Exception {
-        when(adminEventService.findAll(any(AdminEventSearchRequest.class))).thenReturn(List.of());
+        when(eventService.findAllByAdmin(any(AdminEventSearchRequest.class))).thenReturn(List.of());
 
         mockMvc.perform(get(API_PREFIX))
                 .andExpectAll(
@@ -90,7 +90,7 @@ public class AdminEventControllerTest {
                         jsonPath("$.length()").value(0)
                 );
 
-        verify(adminEventService).findAll(argThat(request ->
+        verify(eventService).findAllByAdmin(argThat(request ->
                 request.users() == null && request.states() == null && request.categories() == null
                         && request.rangeStart() == null && request.rangeEnd() == null
                         && request.from() == 0 && request.size() == 10));
@@ -101,7 +101,7 @@ public class AdminEventControllerTest {
         mockMvc.perform(get(API_PREFIX).param("rangeStart", "not-a-date"))
                 .andExpect(status().isBadRequest());
 
-        verifyNoInteractions(adminEventService);
+        verifyNoInteractions(eventService);
     }
 
     @Test
@@ -109,14 +109,14 @@ public class AdminEventControllerTest {
         mockMvc.perform(get(API_PREFIX).param("states", "UNKNOWN"))
                 .andExpect(status().isBadRequest());
 
-        verifyNoInteractions(adminEventService);
+        verifyNoInteractions(eventService);
     }
 
     @Test
     void testUpdatePublish() throws Exception {
         UpdateEventAdminRequest request = new UpdateEventAdminRequest();
         request.setStateAction(AdminEventStateAction.PUBLISH_EVENT);
-        when(adminEventService.update(eq(EVENT_ID), any(UpdateEventAdminRequest.class)))
+        when(eventService.updateByAdmin(eq(EVENT_ID), any(UpdateEventAdminRequest.class)))
                 .thenReturn(createEventFullDto(EventState.PUBLISHED));
 
         mockMvc.perform(patch(API_PREFIX + "/{eventId}", EVENT_ID)
@@ -128,7 +128,7 @@ public class AdminEventControllerTest {
                         jsonPath("$.state").value("PUBLISHED")
                 );
 
-        verify(adminEventService).update(eq(EVENT_ID), any(UpdateEventAdminRequest.class));
+        verify(eventService).updateByAdmin(eq(EVENT_ID), any(UpdateEventAdminRequest.class));
     }
 
     @Test
@@ -138,7 +138,7 @@ public class AdminEventControllerTest {
                         .content("{\"title\":\"ab\"}"))
                 .andExpect(status().isBadRequest());
 
-        verifyNoInteractions(adminEventService);
+        verifyNoInteractions(eventService);
     }
 
     @Test
@@ -148,12 +148,12 @@ public class AdminEventControllerTest {
                         .content("{\"eventDate\":\"2000-01-01 10:00:00\"}"))
                 .andExpect(status().isBadRequest());
 
-        verifyNoInteractions(adminEventService);
+        verifyNoInteractions(eventService);
     }
 
     @Test
     void testUpdateNotFound() throws Exception {
-        when(adminEventService.update(eq(EVENT_ID), any(UpdateEventAdminRequest.class)))
+        when(eventService.updateByAdmin(eq(EVENT_ID), any(UpdateEventAdminRequest.class)))
                 .thenThrow(new NotFoundException("Событие с id = 1 не найдено"));
 
         mockMvc.perform(patch(API_PREFIX + "/{eventId}", EVENT_ID)
@@ -164,7 +164,7 @@ public class AdminEventControllerTest {
 
     @Test
     void testUpdateConflict() throws Exception {
-        when(adminEventService.update(eq(EVENT_ID), any(UpdateEventAdminRequest.class)))
+        when(eventService.updateByAdmin(eq(EVENT_ID), any(UpdateEventAdminRequest.class)))
                 .thenThrow(new ConflictException("Нельзя опубликовать событие"));
 
         mockMvc.perform(patch(API_PREFIX + "/{eventId}", EVENT_ID)
