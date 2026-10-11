@@ -6,7 +6,9 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.query.QueryUtils;
 import ru.practicum.ewm.service.event.model.Event;
 import ru.practicum.ewm.service.event.model.Event_;
 
@@ -17,7 +19,7 @@ public class EventSearchRepositoryImpl implements EventSearchRepository {
     private EntityManager entityManager;
 
     @Override
-    public List<Event> findAllWithFetch(Specification<Event> specification, int from, int size) {
+    public List<Event> findAllWithFetch(Specification<Event> specification, Pageable pageable) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Event> query = cb.createQuery(Event.class);
         Root<Event> root = query.from(Event.class);
@@ -28,11 +30,11 @@ public class EventSearchRepositoryImpl implements EventSearchRepository {
         if (predicate != null) {
             query.where(predicate);
         }
-        query.orderBy(cb.asc(root.get(Event_.id)));
+        query.orderBy(QueryUtils.toOrders(pageable.getSort(), root, cb));
 
         return entityManager.createQuery(query)
-                .setFirstResult(from)
-                .setMaxResults(size)
+                .setFirstResult((int) pageable.getOffset())
+                .setMaxResults(pageable.getPageSize())
                 .getResultList();
     }
 }

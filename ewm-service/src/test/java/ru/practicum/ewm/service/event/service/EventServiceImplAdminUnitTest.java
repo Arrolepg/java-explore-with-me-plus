@@ -5,6 +5,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import ru.practicum.ewm.service.adapter.EventStatsAdapter;
 import ru.practicum.ewm.service.category.model.Category;
 import ru.practicum.ewm.service.category.query.CategoryQuery;
@@ -36,7 +39,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -71,7 +73,8 @@ public class EventServiceImplAdminUnitTest {
     @Test
     void testFindAllReturnsEventsWithRequestsAndViews() {
         Event event = createEvent(EventState.PUBLISHED, LocalDateTime.now().plusDays(5));
-        when(eventRepository.findAllWithFetch(any(), eq(0), eq(10))).thenReturn(List.of(event));
+        when(eventRepository.findAllWithFetch(any(), eq(PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "id")))))
+                .thenReturn(List.of(event));
         when(requestQuery.countRequestsByEventIdsAndStatus(List.of(EVENT_ID), RequestStatus.CONFIRMED))
                 .thenReturn(Map.of(EVENT_ID, 3L));
         when(eventStatsAdapter.getViews(List.of(event))).thenReturn(Map.of(EVENT_ID, 7L));
@@ -88,7 +91,7 @@ public class EventServiceImplAdminUnitTest {
 
     @Test
     void testFindAllEmptyDoesNotRequestStatsAndRequests() {
-        when(eventRepository.findAllWithFetch(any(), anyInt(), anyInt())).thenReturn(List.of());
+        when(eventRepository.findAllWithFetch(any(), any(Pageable.class))).thenReturn(List.of());
 
         List<EventFullDto> result = eventService.findAllByAdmin(searchRequest(0, 10));
 

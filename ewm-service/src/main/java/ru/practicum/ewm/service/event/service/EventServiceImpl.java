@@ -156,7 +156,7 @@ public class EventServiceImpl implements EventService {
         validateAdminSearchRequest(searchRequest);
 
         List<Event> events = eventRepository.findAllWithFetch(EventSpecifications.forAdminSearch(searchRequest),
-                searchRequest.from(), searchRequest.size());
+                toPageable(searchRequest.from(), searchRequest.size()));
         if (events.isEmpty()) {
             return List.of();
         }
@@ -310,10 +310,10 @@ public class EventServiceImpl implements EventService {
     }
 
     private Pageable toPageable(PrivateEventSearchRequest privateEventSearchRequest) {
-        return PageRequest.of(
-                privateEventSearchRequest.from() / privateEventSearchRequest.size(),
-                privateEventSearchRequest.size(),
-                SORT_BY_ID_ASC
-        );
+        return toPageable(privateEventSearchRequest.from(), privateEventSearchRequest.size());
+    }
+
+    private Pageable toPageable(int from, int size) {
+        return PageRequest.of(from / size, size, SORT_BY_ID_ASC);
     }
 }

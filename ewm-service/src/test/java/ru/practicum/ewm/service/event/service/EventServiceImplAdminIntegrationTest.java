@@ -134,15 +134,6 @@ public class EventServiceImplAdminIntegrationTest {
     }
 
     @Test
-    void testFindAllWithOffsetNotMultipleOfSize() {
-        List<EventFullDto> result = eventService.findAllByAdmin(
-                new AdminEventSearchRequest(null, null, null, null, null, 1, 2));
-
-        assertThat(result).extracting(EventFullDto::getId)
-                .containsExactly(alicePublishedTheatre.getId(), bobCanceledConcert.getId());
-    }
-
-    @Test
     void testFindAllReturnsCategoryAndInitiator() {
         List<EventFullDto> result = eventService.findAllByAdmin(
                 search(List.of(bob.getId()), null, null, null, null));

@@ -1,5 +1,6 @@
 package ru.practicum.ewm.service.event.repository;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import ru.practicum.ewm.service.event.model.Event;
 
@@ -11,8 +12,7 @@ public interface EventSearchRepository {
      * Возвращает список без подсчёта общего количества (в отличие от Page).
      *
      * @param specification условия поиска
-     * @param from          количество событий, которые нужно пропустить
-     * @param size          количество событий в выборке
+     * @param pageable      смещение, размер выборки и сортировка
      */
-    List<Event> findAllWithFetch(Specification<Event> specification, int from, int size);
+    List<Event> findAllWithFetch(Specification<Event> specification, Pageable pageable);
 }
