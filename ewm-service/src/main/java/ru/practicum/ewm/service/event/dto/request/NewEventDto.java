@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 import ru.practicum.common.util.PatternDataTime;
@@ -39,6 +40,7 @@ public class NewEventDto {
 
     private Boolean paid = false;
 
+    @PositiveOrZero(message = "Лимит участников не может быть отрицательным")
     private Integer participantLimit = 0;
 
     private Boolean requestModeration = true;
