@@ -2,6 +2,7 @@ package ru.practicum.ewm.service.event.adapter;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -14,6 +15,7 @@ import ru.practicum.stats.dto.parameter.ParamDto;
 import ru.practicum.stats.dto.request.EndpointHitDto;
 import ru.practicum.stats.dto.response.ViewStatsDto;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -199,6 +201,38 @@ public class EventStatsAdapterTest {
         assertThat(result).isZero();
 
         verifyNoInteractions(statsClient);
+    }
+
+    @Test
+    void testGetViewsPassesUniqueTrueToClient() {
+        Event event = createEvent(EVENT_ID_1);
+        when(statsClient.get(any(ParamDto.class)))
+                .thenReturn(ResponseEntity.ok(List.of()));
+
+        eventStatsAdapter.getViews(List.of(event));
+
+        ArgumentCaptor<ParamDto> captor = ArgumentCaptor.forClass(ParamDto.class);
+        verify(statsClient).get(captor.capture());
+
+        ParamDto sent = captor.getValue();
+        assertThat(sent.getUnique()).isTrue();
+        assertThat(sent.getUris()).containsExactly("/events/1");
+        assertThat(sent.getStart()).isEqualTo(LocalDateTime.of(1970, 1, 1, 0, 0));
+        assertThat(sent.getEnd()).isNotNull();
+    }
+
+    @Test
+    void testGetViewsPassesUniqueFalseToClient() {
+        Event event = createEvent(EVENT_ID_1);
+        when(statsClient.get(any(ParamDto.class)))
+                .thenReturn(ResponseEntity.ok(List.of()));
+
+        eventStatsAdapter.getViews(List.of(event), false);
+
+        ArgumentCaptor<ParamDto> captor = ArgumentCaptor.forClass(ParamDto.class);
+        verify(statsClient).get(captor.capture());
+
+        assertThat(captor.getValue().getUnique()).isFalse();
     }
 
     private Event createEvent(Long id) {

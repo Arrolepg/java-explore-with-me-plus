@@ -23,6 +23,7 @@ public class EventStatsAdapter {
     private static final String SERVICE_NAME = "ewm-service";
     private static final String EVENT_URI_PREFIX = "/events/";
     private static final LocalDateTime MIN_DATE = LocalDateTime.of(1970, 1, 1, 0, 0);
+    private static final boolean DEFAULT_UNIQUE_VIEWS = true;
 
     private final StatsClient statsClient;
 
@@ -42,6 +43,10 @@ public class EventStatsAdapter {
     }
 
     public Map<Long, Long> getViews(List<Event> events) {
+        return getViews(events, DEFAULT_UNIQUE_VIEWS);
+    }
+
+    public Map<Long, Long> getViews(List<Event> events, boolean unique) {
         if (events == null || events.isEmpty()) {
             return Collections.emptyMap();
         }
@@ -58,6 +63,7 @@ public class EventStatsAdapter {
                     .start(MIN_DATE)
                     .end(LocalDateTime.now())
                     .uris(uris)
+                    .unique(unique)
                     .build();
 
             List<ViewStatsDto> stats = statsClient.get(paramDto).getBody();
@@ -80,9 +86,13 @@ public class EventStatsAdapter {
     }
 
     public Long getViews(Event event) {
+        return getViews(event, DEFAULT_UNIQUE_VIEWS);
+    }
+
+    public Long getViews(Event event, boolean unique) {
         if (event == null) {
             return 0L;
         }
-        return getViews(List.of(event)).getOrDefault(event.getId(), 0L);
+        return getViews(List.of(event), unique).getOrDefault(event.getId(), 0L);
     }
 }

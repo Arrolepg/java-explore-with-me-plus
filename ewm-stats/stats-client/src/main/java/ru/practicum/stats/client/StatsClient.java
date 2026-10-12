@@ -51,7 +51,6 @@ public class StatsClient {
                 .onStatus(HttpStatusCode::is5xxServerError, this::handle5xx)
                 .toEntity(new ParameterizedTypeReference<List<ViewStatsDto>>() {
                 });
-
     }
 
     private void handle4xx(HttpRequest request, ClientHttpResponse response) throws IOException {
