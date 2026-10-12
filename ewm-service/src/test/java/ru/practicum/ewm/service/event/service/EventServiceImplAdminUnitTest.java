@@ -18,17 +18,15 @@ import ru.practicum.ewm.service.event.model.AdminEventStateAction;
 import ru.practicum.ewm.service.event.model.Event;
 import ru.practicum.ewm.service.event.model.EventLocation;
 import ru.practicum.ewm.service.event.model.EventState;
-import ru.practicum.ewm.service.event.query.EventQuery;
 import ru.practicum.ewm.service.event.repository.EventRepository;
-import ru.practicum.ewm.service.event.utility.AdminEventSearchRequest;
+import ru.practicum.ewm.service.event.utility.AdminEventSearchFilter;
+import ru.practicum.ewm.service.event.utility.PaginationParams;
 import ru.practicum.ewm.service.exception.BadRequestException;
 import ru.practicum.ewm.service.exception.ConflictException;
 import ru.practicum.ewm.service.exception.NotFoundException;
-import ru.practicum.ewm.service.request.command.RequestCommandService;
 import ru.practicum.ewm.service.request.model.RequestStatus;
 import ru.practicum.ewm.service.request.query.RequestQuery;
 import ru.practicum.ewm.service.user.model.User;
-import ru.practicum.ewm.service.user.query.UserQuery;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -58,15 +56,6 @@ public class EventServiceImplAdminUnitTest {
     @Mock
     private EventStatsAdapter eventStatsAdapter;
 
-    @Mock
-    private UserQuery userQuery;
-
-    @Mock
-    private EventQuery eventQuery;
-
-    @Mock
-    private RequestCommandService requestCommandService;
-
     @InjectMocks
     private EventServiceImpl eventService;
 
@@ -77,9 +66,9 @@ public class EventServiceImplAdminUnitTest {
                 .thenReturn(List.of(event));
         when(requestQuery.countRequestsByEventIdsAndStatus(List.of(EVENT_ID), RequestStatus.CONFIRMED))
                 .thenReturn(Map.of(EVENT_ID, 3L));
-        when(eventStatsAdapter.getViews(List.of(event))).thenReturn(Map.of(EVENT_ID, 7L));
+        when(eventStatsAdapter.getViews(List.of(event.getId()))).thenReturn(Map.of(EVENT_ID, 7L));
 
-        List<EventFullDto> result = eventService.findAllByAdmin(searchRequest(0, 10));
+        List<EventFullDto> result = eventService.findAllByAdmin(filter(), params());
 
         assertThat(result).hasSize(1);
         assertAll(
@@ -93,32 +82,19 @@ public class EventServiceImplAdminUnitTest {
     void testFindAllEmptyDoesNotRequestStatsAndRequests() {
         when(eventRepository.findAllWithFetch(any(), any(Pageable.class))).thenReturn(List.of());
 
-        List<EventFullDto> result = eventService.findAllByAdmin(searchRequest(0, 10));
+        List<EventFullDto> result = eventService.findAllByAdmin(filter(), params());
 
         assertThat(result).isEmpty();
         verifyNoInteractions(requestQuery, eventStatsAdapter);
     }
 
     @Test
-    void testFindAllWithNegativeFromThrowsBadRequest() {
-        assertThatThrownBy(() -> eventService.findAllByAdmin(searchRequest(-1, 10)))
-                .isInstanceOf(BadRequestException.class);
-        verifyNoInteractions(eventRepository);
-    }
-
-    @Test
-    void testFindAllWithZeroSizeThrowsBadRequest() {
-        assertThatThrownBy(() -> eventService.findAllByAdmin(searchRequest(0, 0)))
-                .isInstanceOf(BadRequestException.class);
-        verifyNoInteractions(eventRepository);
-    }
-
-    @Test
     void testFindAllWithStartAfterEndThrowsBadRequest() {
-        AdminEventSearchRequest request = new AdminEventSearchRequest(null, null, null,
-                LocalDateTime.of(2031, 1, 1, 0, 0), LocalDateTime.of(2030, 1, 1, 0, 0), 0, 10);
+        AdminEventSearchFilter request = new AdminEventSearchFilter(null, null, null,
+                LocalDateTime.of(2031, 1, 1, 0, 0), LocalDateTime.of(2030, 1, 1, 0, 0));
+        PaginationParams params = params();
 
-        assertThatThrownBy(() -> eventService.findAllByAdmin(request))
+        assertThatThrownBy(() -> eventService.findAllByAdmin(request, params))
                 .isInstanceOf(BadRequestException.class);
         verifyNoInteractions(eventRepository);
     }
@@ -231,11 +207,15 @@ public class EventServiceImplAdminUnitTest {
 
     private void stubCounters(Event event) {
         when(requestQuery.countRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.CONFIRMED)).thenReturn(0L);
-        when(eventStatsAdapter.getViews(event)).thenReturn(0L);
+        when(eventStatsAdapter.getViews(event.getId())).thenReturn(0L);
     }
 
-    private AdminEventSearchRequest searchRequest(int from, int size) {
-        return new AdminEventSearchRequest(null, null, null, null, null, from, size);
+    private AdminEventSearchFilter filter() {
+        return new AdminEventSearchFilter(null, null, null, null, null);
+    }
+
+    private PaginationParams params() {
+        return new PaginationParams(0, 10, null);
     }
 
     private UpdateEventAdminRequest stateAction(AdminEventStateAction stateAction) {

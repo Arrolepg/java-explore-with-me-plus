@@ -2,6 +2,7 @@ package ru.practicum.ewm.service.event.repository;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
@@ -32,9 +33,12 @@ public class EventSearchRepositoryImpl implements EventSearchRepository {
         }
         query.orderBy(QueryUtils.toOrders(pageable.getSort(), root, cb));
 
-        return entityManager.createQuery(query)
-                .setFirstResult((int) pageable.getOffset())
-                .setMaxResults(pageable.getPageSize())
-                .getResultList();
+        TypedQuery<Event> typedQuery = entityManager.createQuery(query);
+        if (pageable.isPaged()) {
+            typedQuery.setFirstResult((int) pageable.getOffset());
+            typedQuery.setMaxResults(pageable.getPageSize());
+        }
+
+        return typedQuery.getResultList();
     }
 }

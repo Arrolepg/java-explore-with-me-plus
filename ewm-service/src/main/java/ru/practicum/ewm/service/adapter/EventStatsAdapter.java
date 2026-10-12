@@ -3,7 +3,6 @@ package ru.practicum.ewm.service.adapter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import ru.practicum.ewm.service.event.model.Event;
 import ru.practicum.stats.client.StatsClient;
 import ru.practicum.stats.client.exception.StatsClientException;
 import ru.practicum.stats.dto.parameter.ParamDto;
@@ -42,19 +41,16 @@ public class EventStatsAdapter {
         }
     }
 
-    public Map<Long, Long> getViews(List<Event> events) {
-        return getViews(events, DEFAULT_UNIQUE_VIEWS);
+    public Map<Long, Long> getViews(List<Long> eventsIds) {
+        return getViews(eventsIds, DEFAULT_UNIQUE_VIEWS);
     }
 
-    public Map<Long, Long> getViews(List<Event> events, boolean unique) {
-        if (events == null || events.isEmpty()) {
+    public Map<Long, Long> getViews(List<Long> eventsIds, boolean unique) {
+        if (eventsIds == null || eventsIds.isEmpty()) {
             return Collections.emptyMap();
         }
 
-        List<Long> eventIds = events.stream()
-                .map(Event::getId)
-                .toList();
-        List<String> uris = eventIds.stream()
+        List<String> uris = eventsIds.stream()
                 .map(id -> EVENT_URI_PREFIX + id)
                 .toList();
 
@@ -85,14 +81,14 @@ public class EventStatsAdapter {
         }
     }
 
-    public Long getViews(Event event) {
-        return getViews(event, DEFAULT_UNIQUE_VIEWS);
+    public Long getViews(Long eventId) {
+        return getViews(eventId, DEFAULT_UNIQUE_VIEWS);
     }
 
-    public Long getViews(Event event, boolean unique) {
-        if (event == null) {
+    public Long getViews(Long eventId, boolean unique) {
+        if (eventId == null) {
             return 0L;
         }
-        return getViews(List.of(event), unique).getOrDefault(event.getId(), 0L);
+        return getViews(List.of(eventId), unique).getOrDefault(eventId, 0L);
     }
 }

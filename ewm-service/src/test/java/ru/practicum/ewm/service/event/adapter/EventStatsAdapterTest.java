@@ -67,7 +67,7 @@ public class EventStatsAdapterTest {
         when(statsClient.get(any(ParamDto.class)))
                 .thenReturn(ResponseEntity.ok(stats));
 
-        Map<Long, Long> result = eventStatsAdapter.getViews(List.of(event1, event2));
+        Map<Long, Long> result = eventStatsAdapter.getViews(List.of(event1.getId(), event2.getId()));
 
         assertThat(result)
                 .hasSize(2)
@@ -89,7 +89,7 @@ public class EventStatsAdapterTest {
 
     @Test
     void testGetViewsListNull() {
-        Map<Long, Long> result = eventStatsAdapter.getViews((List<Event>) null);
+        Map<Long, Long> result = eventStatsAdapter.getViews((List<Long>) null);
 
         assertThat(result).isEmpty();
 
@@ -102,7 +102,7 @@ public class EventStatsAdapterTest {
         when(statsClient.get(any(ParamDto.class)))
                 .thenReturn(ResponseEntity.ok(null));
 
-        Map<Long, Long> result = eventStatsAdapter.getViews(List.of(event));
+        Map<Long, Long> result = eventStatsAdapter.getViews(List.of(event.getId()));
 
         assertThat(result).isEmpty();
 
@@ -115,7 +115,7 @@ public class EventStatsAdapterTest {
         when(statsClient.get(any(ParamDto.class)))
                 .thenReturn(ResponseEntity.ok(List.of()));
 
-        Map<Long, Long> result = eventStatsAdapter.getViews(List.of(event));
+        Map<Long, Long> result = eventStatsAdapter.getViews(List.of(event.getId()));
 
         assertThat(result).isEmpty();
 
@@ -132,7 +132,7 @@ public class EventStatsAdapterTest {
         when(statsClient.get(any(ParamDto.class)))
                 .thenReturn(ResponseEntity.ok(stats));
 
-        Map<Long, Long> result = eventStatsAdapter.getViews(List.of(event));
+        Map<Long, Long> result = eventStatsAdapter.getViews(List.of(event.getId()));
 
         assertThat(result)
                 .hasSize(1)
@@ -149,7 +149,7 @@ public class EventStatsAdapterTest {
         when(statsClient.get(any(ParamDto.class)))
                 .thenReturn(ResponseEntity.ok(stats));
 
-        Map<Long, Long> result = eventStatsAdapter.getViews(List.of(event));
+        Map<Long, Long> result = eventStatsAdapter.getViews(List.of(event.getId()));
 
         assertThat(result)
                 .hasSize(1)
@@ -162,7 +162,7 @@ public class EventStatsAdapterTest {
         when(statsClient.get(any(ParamDto.class)))
                 .thenThrow(new StatsClientException("error", 500, "body"));
 
-        Map<Long, Long> result = eventStatsAdapter.getViews(List.of(event));
+        Map<Long, Long> result = eventStatsAdapter.getViews(List.of(event.getId()));
 
         assertThat(result).isEmpty();
 
@@ -176,7 +176,7 @@ public class EventStatsAdapterTest {
         when(statsClient.get(any(ParamDto.class)))
                 .thenReturn(ResponseEntity.ok(stats));
 
-        Long result = eventStatsAdapter.getViews(event);
+        Long result = eventStatsAdapter.getViews(event.getId());
 
         assertThat(result).isEqualTo(5L);
 
@@ -189,14 +189,14 @@ public class EventStatsAdapterTest {
         when(statsClient.get(any(ParamDto.class)))
                 .thenReturn(ResponseEntity.ok(List.of()));
 
-        Long result = eventStatsAdapter.getViews(event);
+        Long result = eventStatsAdapter.getViews(event.getId());
 
         assertThat(result).isZero();
     }
 
     @Test
     void testGetViewsEventNull() {
-        Long result = eventStatsAdapter.getViews((Event) null);
+        Long result = eventStatsAdapter.getViews((Long) null);
 
         assertThat(result).isZero();
 
@@ -209,7 +209,7 @@ public class EventStatsAdapterTest {
         when(statsClient.get(any(ParamDto.class)))
                 .thenReturn(ResponseEntity.ok(List.of()));
 
-        eventStatsAdapter.getViews(List.of(event));
+        eventStatsAdapter.getViews(List.of(event.getId()));
 
         ArgumentCaptor<ParamDto> captor = ArgumentCaptor.forClass(ParamDto.class);
         verify(statsClient).get(captor.capture());
@@ -227,7 +227,7 @@ public class EventStatsAdapterTest {
         when(statsClient.get(any(ParamDto.class)))
                 .thenReturn(ResponseEntity.ok(List.of()));
 
-        eventStatsAdapter.getViews(List.of(event), false);
+        eventStatsAdapter.getViews(List.of(event.getId()), false);
 
         ArgumentCaptor<ParamDto> captor = ArgumentCaptor.forClass(ParamDto.class);
         verify(statsClient).get(captor.capture());

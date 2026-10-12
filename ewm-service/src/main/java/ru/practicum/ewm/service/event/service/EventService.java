@@ -7,9 +7,7 @@ import ru.practicum.ewm.service.event.dto.request.UpdateEventUserRequest;
 import ru.practicum.ewm.service.event.dto.response.EventFullDto;
 import ru.practicum.ewm.service.event.dto.response.EventRequestStatusUpdateResult;
 import ru.practicum.ewm.service.event.dto.response.EventShortDto;
-import ru.practicum.ewm.service.event.utility.AdminEventSearchRequest;
-import ru.practicum.ewm.service.event.utility.PrivateEventSearchRequest;
-import ru.practicum.ewm.service.event.utility.ResourceReference;
+import ru.practicum.ewm.service.event.utility.*;
 import ru.practicum.ewm.service.request.dto.ParticipationRequestDto;
 
 import java.util.List;
@@ -24,11 +22,14 @@ public interface EventService {
     EventRequestStatusUpdateResult updateRequests(ResourceReference resourceReference,
                                                   EventRequestStatusUpdateRequest statusUpdateRequestDto);
 
-    List<EventShortDto> findAll(Long userId, PrivateEventSearchRequest privateEventSearchRequest);
+    List<EventShortDto> findAllByInitiator(Long userId, PaginationParams paginationParams);
 
     EventFullDto findById(ResourceReference resourceReference);
 
-    List<EventFullDto> findAllByAdmin(AdminEventSearchRequest searchRequest);
+    List<EventFullDto> findAllByAdmin(AdminEventSearchFilter searchFilter, PaginationParams paginationParams);
 
     EventFullDto updateByAdmin(Long eventId, UpdateEventAdminRequest eventDto);
+
+    List<EventShortDto> findAllPublic(PublicEventSearchFilter searchFilter, PaginationParams paginationParams,
+                                      EventStatsHitParams hitParams);
 }

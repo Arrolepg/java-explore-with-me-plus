@@ -13,7 +13,8 @@ import ru.practicum.ewm.service.event.dto.response.EventFullDto;
 import ru.practicum.ewm.service.event.model.AdminEventStateAction;
 import ru.practicum.ewm.service.event.model.EventState;
 import ru.practicum.ewm.service.event.service.EventService;
-import ru.practicum.ewm.service.event.utility.AdminEventSearchRequest;
+import ru.practicum.ewm.service.event.utility.AdminEventSearchFilter;
+import ru.practicum.ewm.service.event.utility.PaginationParams;
 import ru.practicum.ewm.service.exception.ConflictException;
 import ru.practicum.ewm.service.exception.NotFoundException;
 import ru.practicum.ewm.service.user.dto.UserShortDto;
@@ -48,7 +49,7 @@ public class AdminEventControllerTest {
 
     @Test
     void testFindAllWithAllParams() throws Exception {
-        when(eventService.findAllByAdmin(any(AdminEventSearchRequest.class)))
+        when(eventService.findAllByAdmin(any(AdminEventSearchFilter.class), any(PaginationParams.class)))
                 .thenReturn(List.of(createEventFullDto(EventState.PENDING)));
 
         mockMvc.perform(get(API_PREFIX)
@@ -72,17 +73,24 @@ public class AdminEventControllerTest {
                     () -> assertThat(request.states()).containsExactly(EventState.PENDING, EventState.PUBLISHED),
                     () -> assertThat(request.categories()).containsExactly(3L),
                     () -> assertThat(request.rangeStart()).isEqualTo(LocalDateTime.of(2030, 1, 1, 0, 0)),
-                    () -> assertThat(request.rangeEnd()).isEqualTo(LocalDateTime.of(2031, 1, 1, 0, 0)),
-                    () -> assertThat(request.from()).isEqualTo(5),
-                    () -> assertThat(request.size()).isEqualTo(5)
+                    () -> assertThat(request.rangeEnd()).isEqualTo(LocalDateTime.of(2031, 1, 1, 0, 0))
+
             );
             return true;
-        }));
+        }),
+                argThat(paginationParams -> {
+                    assertAll(
+                            () -> assertThat(paginationParams.from()).isEqualTo(5),
+                            () -> assertThat(paginationParams.size()).isEqualTo(5)
+                    );
+                    return true;
+                })
+        );
     }
 
     @Test
     void testFindAllWithoutParamsUsesDefaults() throws Exception {
-        when(eventService.findAllByAdmin(any(AdminEventSearchRequest.class))).thenReturn(List.of());
+        when(eventService.findAllByAdmin(any(AdminEventSearchFilter.class), any(PaginationParams.class))).thenReturn(List.of());
 
         mockMvc.perform(get(API_PREFIX))
                 .andExpectAll(
@@ -90,10 +98,14 @@ public class AdminEventControllerTest {
                         jsonPath("$.length()").value(0)
                 );
 
-        verify(eventService).findAllByAdmin(argThat(request ->
-                request.users() == null && request.states() == null && request.categories() == null
-                        && request.rangeStart() == null && request.rangeEnd() == null
-                        && request.from() == 0 && request.size() == 10));
+        verify(eventService).findAllByAdmin(
+                argThat(filter ->
+                        filter.users() == null && filter.states() == null && filter.categories() == null
+                                && filter.rangeStart() == null && filter.rangeEnd() == null),
+                argThat(paginationParams ->
+                        paginationParams.from() == 0 && paginationParams.size() == 10
+                                && paginationParams.sort() == null)
+        );
     }
 
     @Test
@@ -107,6 +119,22 @@ public class AdminEventControllerTest {
     @Test
     void testFindAllWithUnknownStateReturnsBadRequest() throws Exception {
         mockMvc.perform(get(API_PREFIX).param("states", "UNKNOWN"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(eventService);
+    }
+
+    @Test
+    void testFindAllWithNegativeFromThrowsBadRequest() throws Exception {
+        mockMvc.perform(get(API_PREFIX).param("from", "-1"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(eventService);
+    }
+
+    @Test
+    void testFindAllWithZeroSizeThrowsBadRequest() throws Exception {
+        mockMvc.perform(get(API_PREFIX).param("size", "0"))
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(eventService);
