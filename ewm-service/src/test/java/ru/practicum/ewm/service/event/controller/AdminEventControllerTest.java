@@ -7,7 +7,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import ru.practicum.ewm.service.category.dto.CategoryDto;
+import ru.practicum.ewm.service.category.dto.response.CategoryResponseDto;
 import ru.practicum.ewm.service.event.dto.request.UpdateEventAdminRequest;
 import ru.practicum.ewm.service.event.dto.response.EventFullDto;
 import ru.practicum.ewm.service.event.model.AdminEventStateAction;
@@ -177,7 +177,7 @@ public class AdminEventControllerTest {
         return EventFullDto.builder()
                 .id(EVENT_ID)
                 .annotation("Some annotation text here for event")
-                .category(CategoryDto.builder().id(1L).name("Category").build())
+                .category(CategoryResponseDto.builder().id(1L).name("Category").build())
                 .description("Some description text here for event")
                 .eventDate(LocalDateTime.now().plusDays(10))
                 .initiator(UserShortDto.builder().id(1L).name("User").build())
