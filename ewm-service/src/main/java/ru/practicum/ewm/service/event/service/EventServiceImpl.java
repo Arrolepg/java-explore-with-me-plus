@@ -11,6 +11,8 @@ import ru.practicum.ewm.service.category.query.CategoryQuery;
 import ru.practicum.ewm.service.event.dto.request.EventLocationUpdateDto;
 import ru.practicum.ewm.service.event.dto.request.EventRequestStatusUpdateRequest;
 import ru.practicum.ewm.service.event.dto.request.NewEventDto;
+import ru.practicum.ewm.service.event.dto.request.UpdateEventAdminRequest;
+import ru.practicum.ewm.service.event.dto.request.UpdateEventRequest;
 import ru.practicum.ewm.service.event.dto.request.UpdateEventUserRequest;
 import ru.practicum.ewm.service.event.dto.response.EventFullDto;
 import ru.practicum.ewm.service.event.dto.response.EventRequestStatusUpdateResult;
@@ -18,10 +20,13 @@ import ru.practicum.ewm.service.event.dto.response.EventShortDto;
 import ru.practicum.ewm.service.event.model.*;
 import ru.practicum.ewm.service.event.query.EventQuery;
 import ru.practicum.ewm.service.event.repository.EventRepository;
+import ru.practicum.ewm.service.event.repository.EventSpecifications;
+import ru.practicum.ewm.service.event.utility.AdminEventSearchRequest;
 import ru.practicum.ewm.service.event.utility.EventMapper;
 import ru.practicum.ewm.service.event.utility.PrivateEventSearchRequest;
 import ru.practicum.ewm.service.adapter.EventStatsAdapter;
 import ru.practicum.ewm.service.event.utility.ResourceReference;
+import ru.practicum.ewm.service.exception.BadRequestException;
 import ru.practicum.ewm.service.exception.ConflictException;
 import ru.practicum.ewm.service.exception.NotFoundException;
 import ru.practicum.ewm.service.request.command.RequestCommandService;
@@ -33,6 +38,7 @@ import ru.practicum.ewm.service.request.query.RequestQuery;
 import ru.practicum.ewm.service.user.model.User;
 import ru.practicum.ewm.service.user.query.UserQuery;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -41,6 +47,7 @@ import java.util.Map;
 @Transactional(readOnly = true)
 public class EventServiceImpl implements EventService {
     private static final Sort SORT_BY_ID_ASC = Sort.by(Sort.Direction.ASC, Event_.ID);
+    private static final long MIN_HOURS_BEFORE_EVENT_ON_PUBLISH = 1;
 
     private final EventRepository eventRepository;
     private final UserQuery userQuery;
@@ -144,6 +151,48 @@ public class EventServiceImpl implements EventService {
         return EventMapper.toEventFullDto(event, confirmedRequests, views);
     }
 
+    @Override
+    public List<EventFullDto> findAllByAdmin(AdminEventSearchRequest searchRequest) {
+        validateAdminSearchRequest(searchRequest);
+
+        List<Event> events = eventRepository.findAllWithFetch(EventSpecifications.forAdminSearch(searchRequest),
+                toPageable(searchRequest.from(), searchRequest.size()));
+        if (events.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> eventsIds = events.stream()
+                .map(Event::getId)
+                .toList();
+        Map<Long, Long> confirmedRequestsMap = requestQuery.countRequestsByEventIdsAndStatus(eventsIds,
+                RequestStatus.CONFIRMED);
+        Map<Long, Long> viewsMap = eventStatsAdapter.getViews(events);
+
+        return events.stream()
+                .map(event -> EventMapper.toEventFullDto(
+                        event,
+                        confirmedRequestsMap.getOrDefault(event.getId(), 0L),
+                        viewsMap.getOrDefault(event.getId(), 0L)
+                ))
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public EventFullDto updateByAdmin(Long eventId, UpdateEventAdminRequest eventDto) {
+        Event event = findFullEvent(eventId);
+
+        checkAdminStateAction(event, eventDto);
+
+        applyUpdates(event, eventDto);
+        applyAdminStateAction(event, eventDto.getStateAction());
+
+        long confirmedRequests = requestQuery.countRequestsByEventIdAndStatus(event.getId(), RequestStatus.CONFIRMED);
+        long views = eventStatsAdapter.getViews(event);
+
+        return EventMapper.toEventFullDto(event, confirmedRequests, views);
+    }
+
     private void checkInitiator(Long initiatorId, Long userId) {
         if (!initiatorId.equals(userId)) {
             throw new ConflictException("Пользователь не является инициатором события");
@@ -175,7 +224,7 @@ public class EventServiceImpl implements EventService {
         return eventLocation;
     }
 
-    private void applyUpdates(Event event, UpdateEventUserRequest eventDto) {
+    private void applyUpdates(Event event, UpdateEventRequest eventDto) {
         if (eventDto.getAnnotation() != null) {
             event.setAnnotation(eventDto.getAnnotation());
         }
@@ -216,11 +265,55 @@ public class EventServiceImpl implements EventService {
         }
     }
 
+    private void validateAdminSearchRequest(AdminEventSearchRequest searchRequest) {
+        if (searchRequest.from() < 0) {
+            throw new BadRequestException("Параметр from не может быть отрицательным");
+        }
+        if (searchRequest.size() <= 0) {
+            throw new BadRequestException("Параметр size должен быть больше нуля");
+        }
+        if (searchRequest.rangeStart() != null && searchRequest.rangeEnd() != null
+                && searchRequest.rangeStart().isAfter(searchRequest.rangeEnd())) {
+            throw new BadRequestException("Дата начала диапазона (rangeStart) не может быть позже даты конца (rangeEnd)");
+        }
+    }
+
+    private void checkAdminStateAction(Event event, UpdateEventAdminRequest eventDto) {
+        AdminEventStateAction stateAction = eventDto.getStateAction();
+        if (stateAction == null) {
+            return;
+        }
+
+        if (stateAction == AdminEventStateAction.PUBLISH_EVENT) {
+            if (event.getState() != EventState.PENDING) {
+                throw new ConflictException("Нельзя опубликовать событие, так как оно не в состоянии "
+                        + EventState.PENDING + ": " + event.getState());
+            }
+
+            LocalDateTime eventDate = eventDto.getEventDate() != null ? eventDto.getEventDate() : event.getEventDate();
+            if (eventDate.isBefore(LocalDateTime.now().plusHours(MIN_HOURS_BEFORE_EVENT_ON_PUBLISH))) {
+                throw new ConflictException("Дата начала события должна быть не ранее чем через "
+                        + MIN_HOURS_BEFORE_EVENT_ON_PUBLISH + " ч. от даты публикации");
+            }
+        } else if (stateAction == AdminEventStateAction.REJECT_EVENT && event.getState() == EventState.PUBLISHED) {
+            throw new ConflictException("Нельзя отклонить событие, так как оно уже опубликовано");
+        }
+    }
+
+    private void applyAdminStateAction(Event event, AdminEventStateAction stateAction) {
+        if (stateAction == AdminEventStateAction.PUBLISH_EVENT) {
+            event.setState(EventState.PUBLISHED);
+            event.setPublishedOn(LocalDateTime.now());
+        } else if (stateAction == AdminEventStateAction.REJECT_EVENT) {
+            event.setState(EventState.CANCELED);
+        }
+    }
+
     private Pageable toPageable(PrivateEventSearchRequest privateEventSearchRequest) {
-        return PageRequest.of(
-                privateEventSearchRequest.from() / privateEventSearchRequest.size(),
-                privateEventSearchRequest.size(),
-                SORT_BY_ID_ASC
-        );
+        return toPageable(privateEventSearchRequest.from(), privateEventSearchRequest.size());
+    }
+
+    private Pageable toPageable(int from, int size) {
+        return PageRequest.of(from / size, size, SORT_BY_ID_ASC);
     }
 }

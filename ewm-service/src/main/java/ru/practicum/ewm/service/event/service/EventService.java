@@ -2,10 +2,12 @@ package ru.practicum.ewm.service.event.service;
 
 import ru.practicum.ewm.service.event.dto.request.EventRequestStatusUpdateRequest;
 import ru.practicum.ewm.service.event.dto.request.NewEventDto;
+import ru.practicum.ewm.service.event.dto.request.UpdateEventAdminRequest;
 import ru.practicum.ewm.service.event.dto.request.UpdateEventUserRequest;
 import ru.practicum.ewm.service.event.dto.response.EventFullDto;
 import ru.practicum.ewm.service.event.dto.response.EventRequestStatusUpdateResult;
 import ru.practicum.ewm.service.event.dto.response.EventShortDto;
+import ru.practicum.ewm.service.event.utility.AdminEventSearchRequest;
 import ru.practicum.ewm.service.event.utility.PrivateEventSearchRequest;
 import ru.practicum.ewm.service.event.utility.ResourceReference;
 import ru.practicum.ewm.service.request.dto.ParticipationRequestDto;
@@ -25,4 +27,8 @@ public interface EventService {
     List<EventShortDto> findAll(Long userId, PrivateEventSearchRequest privateEventSearchRequest);
 
     EventFullDto findById(ResourceReference resourceReference);
+
+    List<EventFullDto> findAllByAdmin(AdminEventSearchRequest searchRequest);
+
+    EventFullDto updateByAdmin(Long eventId, UpdateEventAdminRequest eventDto);
 }

@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface EventRepository extends JpaRepository<Event, Long> {
+public interface EventRepository extends JpaRepository<Event, Long>, EventSearchRepository {
     @Query("select e from Event as e " +
             "join fetch e.category " +
             "join fetch e.initiator " +
