@@ -11,6 +11,9 @@ import java.util.Optional;
 
 @Repository
 public interface EventRepository extends JpaRepository<Event, Long>, EventSearchRepository {
+
+    boolean existsByCategoryId(Long catId);
+
     @Query("select e from Event as e " +
             "join fetch e.category " +
             "join fetch e.initiator " +

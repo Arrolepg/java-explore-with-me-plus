@@ -2,6 +2,7 @@ package ru.practicum.ewm.service.category.service;
 
 import ru.practicum.ewm.service.category.dto.request.CategoryCreateDto;
 import ru.practicum.ewm.service.category.dto.response.CategoryResponseDto;
+import ru.practicum.ewm.service.category.utility.PublicCategorySearchRequest;
 
 import java.util.List;
 
@@ -46,5 +47,5 @@ public interface CategoryService {
      *
      * @return список всех категорий
      */
-    List<CategoryResponseDto> getAll();
+    List<CategoryResponseDto> getAll(PublicCategorySearchRequest publicCategorySearchRequest);
 }
