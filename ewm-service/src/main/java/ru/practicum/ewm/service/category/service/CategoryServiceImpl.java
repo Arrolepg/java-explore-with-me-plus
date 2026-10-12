@@ -15,7 +15,6 @@ import ru.practicum.ewm.service.category.utility.CategoryMapper;
 import ru.practicum.ewm.service.category.utility.PublicCategorySearchRequest;
 import ru.practicum.ewm.service.event.model.Event_;
 import ru.practicum.ewm.service.event.repository.EventRepository;
-import ru.practicum.ewm.service.event.utility.PrivateEventSearchRequest;
 import ru.practicum.ewm.service.exception.BadRequestException;
 import ru.practicum.ewm.service.exception.ConflictException;
 import ru.practicum.ewm.service.exception.NotFoundException;

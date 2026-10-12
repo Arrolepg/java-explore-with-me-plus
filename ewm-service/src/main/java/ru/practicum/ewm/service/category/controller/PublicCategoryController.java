@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.*;
 import ru.practicum.ewm.service.category.dto.response.CategoryResponseDto;
 import ru.practicum.ewm.service.category.service.CategoryService;
 import ru.practicum.ewm.service.category.utility.PublicCategorySearchRequest;
-import ru.practicum.ewm.service.event.utility.PrivateEventSearchRequest;
 
 import java.util.List;
 
