@@ -1,4 +1,4 @@
-package ru.practicum.ewm.service.event.utility;
+package ru.practicum.ewm.service.common;
 
 import jakarta.validation.constraints.Min;
 import ru.practicum.ewm.service.event.model.EventSearchSort;

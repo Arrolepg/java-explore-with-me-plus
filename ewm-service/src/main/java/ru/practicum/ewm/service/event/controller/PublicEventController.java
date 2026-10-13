@@ -5,11 +5,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+import ru.practicum.ewm.service.event.dto.response.EventFullDto;
 import ru.practicum.ewm.service.event.dto.response.EventShortDto;
 import ru.practicum.ewm.service.event.service.EventService;
 import ru.practicum.ewm.service.event.utility.EventStatsHitParams;
 import ru.practicum.ewm.service.event.utility.PublicEventSearchFilter;
-import ru.practicum.ewm.service.event.utility.PaginationParams;
+import ru.practicum.ewm.service.common.PaginationParams;
 
 import java.util.List;
 
@@ -27,10 +28,22 @@ public class PublicEventController {
                                        @Valid @ModelAttribute PaginationParams paginationParams,
                                        HttpServletRequest httpServletRequest) {
         log.info("Получен запрос на поиск всех событий");
-        log.info("searchFilter = {}, paginationParams = {}", searchFilter, paginationParams);
 
         EventStatsHitParams hitParams = new EventStatsHitParams(URI, httpServletRequest.getRemoteAddr());
 
         return eventService.findAllPublic(searchFilter, paginationParams, hitParams);
+    }
+
+    @GetMapping("/{eventId}")
+    public EventFullDto findById(@PathVariable Long eventId,
+                                 HttpServletRequest httpServletRequest) {
+        log.info("Получен запрос на поиск события с id = {}", eventId);
+
+        EventStatsHitParams hitParams = new EventStatsHitParams(
+                URI + "/" + eventId,
+                httpServletRequest.getRemoteAddr()
+        );
+
+        return eventService.findByIdPublic(eventId, hitParams);
     }
 }

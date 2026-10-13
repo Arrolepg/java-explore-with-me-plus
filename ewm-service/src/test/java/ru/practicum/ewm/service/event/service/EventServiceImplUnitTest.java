@@ -22,7 +22,7 @@ import ru.practicum.ewm.service.event.model.EventState;
 import ru.practicum.ewm.service.event.model.UserEventStateAction;
 import ru.practicum.ewm.service.event.query.EventQuery;
 import ru.practicum.ewm.service.event.repository.EventRepository;
-import ru.practicum.ewm.service.event.utility.PaginationParams;
+import ru.practicum.ewm.service.common.PaginationParams;
 import ru.practicum.ewm.service.adapter.EventStatsAdapter;
 import ru.practicum.ewm.service.event.utility.ResourceReference;
 import ru.practicum.ewm.service.exception.ConflictException;

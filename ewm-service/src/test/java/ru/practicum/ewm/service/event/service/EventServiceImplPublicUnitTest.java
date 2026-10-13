@@ -11,13 +11,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import ru.practicum.ewm.service.adapter.EventStatsAdapter;
 import ru.practicum.ewm.service.category.model.Category;
+import ru.practicum.ewm.service.event.dto.response.EventFullDto;
 import ru.practicum.ewm.service.event.dto.response.EventShortDto;
 import ru.practicum.ewm.service.event.model.*;
 import ru.practicum.ewm.service.event.repository.EventRepository;
 import ru.practicum.ewm.service.event.utility.EventStatsHitParams;
-import ru.practicum.ewm.service.event.utility.PaginationParams;
+import ru.practicum.ewm.service.common.PaginationParams;
 import ru.practicum.ewm.service.event.utility.PublicEventSearchFilter;
 import ru.practicum.ewm.service.exception.BadRequestException;
+import ru.practicum.ewm.service.exception.NotFoundException;
 import ru.practicum.ewm.service.request.model.RequestStatus;
 import ru.practicum.ewm.service.request.query.RequestQuery;
 import ru.practicum.ewm.service.user.model.User;
@@ -25,10 +27,12 @@ import ru.practicum.ewm.service.user.model.User;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -72,7 +76,6 @@ public class EventServiceImplPublicUnitTest {
         assertThat(events).hasSize(1);
         assertAll(
                 () -> assertThat(events.getFirst().getId()).isEqualTo(EVENT_ID_1),
-                () -> assertThat(events.getFirst().getConfirmedRequests()).isEqualTo(3L),
                 () -> assertThat(events.getFirst().getConfirmedRequests()).isEqualTo(3L),
                 () -> assertThat(events.getFirst().getViews()).isEqualTo(3L)
         );
@@ -231,6 +234,85 @@ public class EventServiceImplPublicUnitTest {
 
         verifyNoMoreInteractions(eventRepository);
         verifyNoMoreInteractions(eventStatsAdapter);
+    }
+
+    @Test
+    void testFindByIdPublicWithCorrectSearch() {
+        Event event = createEvent(EVENT_ID_1, LocalDateTime.now().plusDays(5));
+        event.setPublishedOn(LocalDateTime.now().plusDays(6));
+
+        when(eventRepository.findByIdWithFetch(any())).thenReturn(Optional.of(event));
+        when(requestQuery.countRequestsByEventIdAndStatus(
+                EVENT_ID_1, RequestStatus.CONFIRMED
+        ))
+                .thenReturn(3L);
+        when(eventStatsAdapter.getViews(EVENT_ID_1))
+                .thenReturn(3L);
+
+        EventFullDto result = eventService.findByIdPublic(
+                EVENT_ID_1,
+                hitParams()
+        );
+
+        assertNotNull(result);
+        assertAll(
+                () -> assertThat(result.getId()).isEqualTo(EVENT_ID_1),
+                () -> assertThat(result.getConfirmedRequests()).isEqualTo(3L),
+                () -> assertThat(result.getViews()).isEqualTo(3L)
+        );
+
+        verify(eventStatsAdapter).createHit(URI, IP);
+    }
+
+    @Test
+    void testFindByIdPublicNotPublishedEventByPublishedOn() {
+        Event event = createEvent(EVENT_ID_1, LocalDateTime.now().plusDays(5));
+        event.setPublishedOn(null);
+
+        when(eventRepository.findByIdWithFetch(any())).thenReturn(Optional.of(event));
+
+        assertThatThrownBy(
+                () -> eventService.findByIdPublic(
+                        EVENT_ID_1,
+                        hitParams()
+                )
+        )
+                .isInstanceOf(NotFoundException.class);
+
+        verifyNoMoreInteractions(eventRepository, eventStatsAdapter, requestQuery);
+    }
+
+    @Test
+    void testFindByIdPublicNotPublishedEventByStateNotPublished() {
+        Event event = createEvent(EVENT_ID_1, LocalDateTime.now().plusDays(5));
+        event.setState(EventState.PENDING);
+
+        when(eventRepository.findByIdWithFetch(any())).thenReturn(Optional.of(event));
+
+        assertThatThrownBy(
+                () -> eventService.findByIdPublic(
+                        EVENT_ID_1,
+                        hitParams()
+                )
+        )
+                .isInstanceOf(NotFoundException.class);
+
+        verifyNoMoreInteractions(eventRepository, eventStatsAdapter, requestQuery);
+    }
+
+    @Test
+    void testFindByIdPublicNotFoundEvent() {
+        when(eventRepository.findByIdWithFetch(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(
+                () -> eventService.findByIdPublic(
+                        99L,
+                        hitParams()
+                )
+        )
+                .isInstanceOf(NotFoundException.class);
+
+        verifyNoMoreInteractions(eventRepository, eventStatsAdapter, requestQuery);
     }
 
     private Event createEvent(Long id, LocalDateTime eventDate) {

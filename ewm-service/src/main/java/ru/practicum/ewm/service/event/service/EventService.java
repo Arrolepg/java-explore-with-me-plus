@@ -1,5 +1,6 @@
 package ru.practicum.ewm.service.event.service;
 
+import ru.practicum.ewm.service.common.PaginationParams;
 import ru.practicum.ewm.service.event.dto.request.EventRequestStatusUpdateRequest;
 import ru.practicum.ewm.service.event.dto.request.NewEventDto;
 import ru.practicum.ewm.service.event.dto.request.UpdateEventAdminRequest;
@@ -32,4 +33,6 @@ public interface EventService {
 
     List<EventShortDto> findAllPublic(PublicEventSearchFilter searchFilter, PaginationParams paginationParams,
                                       EventStatsHitParams hitParams);
+
+    EventFullDto findByIdPublic(Long eventId, EventStatsHitParams hitParams);
 }

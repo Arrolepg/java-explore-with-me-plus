@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.service.adapter.EventStatsAdapter;
 import ru.practicum.ewm.service.category.model.Category;
 import ru.practicum.ewm.service.category.repository.CategoryRepository;
+import ru.practicum.ewm.service.event.dto.response.EventFullDto;
 import ru.practicum.ewm.service.event.dto.response.EventShortDto;
 import ru.practicum.ewm.service.event.model.Event;
 import ru.practicum.ewm.service.event.model.EventLocation;
@@ -17,8 +18,9 @@ import ru.practicum.ewm.service.event.model.EventSearchSort;
 import ru.practicum.ewm.service.event.model.EventState;
 import ru.practicum.ewm.service.event.repository.EventRepository;
 import ru.practicum.ewm.service.event.utility.EventStatsHitParams;
-import ru.practicum.ewm.service.event.utility.PaginationParams;
+import ru.practicum.ewm.service.common.PaginationParams;
 import ru.practicum.ewm.service.event.utility.PublicEventSearchFilter;
+import ru.practicum.ewm.service.exception.NotFoundException;
 import ru.practicum.ewm.service.request.model.Request;
 import ru.practicum.ewm.service.request.model.RequestStatus;
 import ru.practicum.ewm.service.request.repository.RequestRepository;
@@ -31,9 +33,9 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -330,6 +332,79 @@ class EventServiceImplPublicIntegrationTest {
                 hit());
 
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    void testFindByIdPublicReturnsPublishedEvent() {
+        createConfirmedRequest(alicePublishedConcert, bob);
+        createConfirmedRequest(alicePublishedConcert, carol);
+
+        requestRepository.save(Request.builder()
+                .event(alicePublishedConcert)
+                .requester(alice)
+                .status(RequestStatus.PENDING)
+                .created(LocalDateTime.now())
+                .build());
+        eventRepository.flush();
+        requestRepository.flush();
+
+        when(eventStatsAdapter.getViews(alicePublishedConcert.getId())).thenReturn(40L);
+
+        EventFullDto result = eventService.findByIdPublic(alicePublishedConcert.getId(), hit());
+
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(alicePublishedConcert.getId());
+        assertThat(result.getTitle()).isEqualTo(alicePublishedConcert.getTitle());
+        assertThat(result.getConfirmedRequests()).isEqualTo(2L);
+        assertThat(result.getViews()).isEqualTo(40L);
+        assertThat(result.getState()).isEqualTo(EventState.PUBLISHED);
+
+        verify(eventStatsAdapter).getViews(alicePublishedConcert.getId());
+        verify(eventStatsAdapter).createHit(URI, IP);
+    }
+
+    @Test
+    void testFindByIdPublicWithZeroViewsAndRequests() {
+        when(eventStatsAdapter.getViews(alicePublishedConcert.getId())).thenReturn(0L);
+
+        EventFullDto result = eventService.findByIdPublic(alicePublishedConcert.getId(), hit());
+
+        assertThat(result.getConfirmedRequests()).isZero();
+        assertThat(result.getViews()).isZero();
+    }
+
+    @Test
+    void testFindByIdPublicPendingEventThrowsNotFound() {
+        assertThatThrownBy(() -> eventService.findByIdPublic(alicePendingConcert.getId(), hit()))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessageContaining("id = " + alicePendingConcert.getId());
+
+        verify(eventStatsAdapter, never()).createHit(any(), any());
+    }
+
+    @Test
+    void testFindByIdPublicCanceledEventThrowsNotFound() {
+        assertThatThrownBy(() -> eventService.findByIdPublic(bobCanceledConcert.getId(), hit()))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessageContaining("id = " + bobCanceledConcert.getId());
+
+        verify(eventStatsAdapter, never()).createHit(any(), any());
+    }
+
+    @Test
+    void testFindByIdPublicNonExistentEventThrowsNotFound() {
+        assertThatThrownBy(() -> eventService.findByIdPublic(99L, hit()))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessageContaining("id = " + 99L);
+
+        verify(eventStatsAdapter, never()).createHit(any(), any());
+    }
+
+    @Test
+    void testFindByIdPublicCreatesHitOnlyForPublished() {
+        eventService.findByIdPublic(alicePublishedConcert.getId(), hit());
+
+        verify(eventStatsAdapter).createHit(URI, IP);
     }
 
     private PublicEventSearchFilter filter(String text, List<Long> categories, Boolean paid,

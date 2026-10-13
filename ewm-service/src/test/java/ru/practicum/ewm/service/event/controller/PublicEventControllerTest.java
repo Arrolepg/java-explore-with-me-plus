@@ -8,7 +8,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import ru.practicum.ewm.service.event.model.EventSearchSort;
 import ru.practicum.ewm.service.event.service.EventService;
 import ru.practicum.ewm.service.event.utility.EventStatsHitParams;
-import ru.practicum.ewm.service.event.utility.PaginationParams;
+import ru.practicum.ewm.service.common.PaginationParams;
 import ru.practicum.ewm.service.event.utility.PublicEventSearchFilter;
 
 import java.time.LocalDateTime;
@@ -25,6 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(PublicEventController.class)
 public class PublicEventControllerTest {
     private static final String API_PREFIX = "/events";
+    private static final Long EVENT_ID = 1L;
 
     @Autowired
     private MockMvc mockMvc;
@@ -76,7 +77,7 @@ public class PublicEventControllerTest {
                 }),
                 argThat(hitParams -> {
                     assertAll(
-                            () -> assertThat(hitParams.uri()).isEqualTo("/events"),
+                            () -> assertThat(hitParams.uri()).isEqualTo(API_PREFIX),
                             () -> assertThat(hitParams.ip()).isEqualTo("127.0.0.1")
                     );
                     return true;
@@ -124,7 +125,7 @@ public class PublicEventControllerTest {
                 }),
                 argThat(hitParams -> {
                     assertAll(
-                            () -> assertThat(hitParams.uri()).isEqualTo("/events"),
+                            () -> assertThat(hitParams.uri()).isEqualTo(API_PREFIX),
                             () -> assertThat(hitParams.ip()).isEqualTo("127.0.0.1")
                     );
                     return true;
@@ -167,6 +168,40 @@ public class PublicEventControllerTest {
     @Test
     void testFindAllWithZeroSizeThrowsBadRequest() throws Exception {
         mockMvc.perform(get(API_PREFIX).param("size", "0"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(eventService);
+    }
+
+    @Test
+    void testFindByIdPublic() throws Exception {
+        when(eventService.findByIdPublic(eq(EVENT_ID),
+                any(EventStatsHitParams.class)))
+                .thenReturn(null);
+
+        mockMvc.perform(get(API_PREFIX + "/" + EVENT_ID))
+                .andExpect(
+                        status().isOk()
+                );
+
+        verify(eventService).findByIdPublic(
+                argThat(eventId -> {
+                    assertThat(eventId).isEqualTo(EVENT_ID);
+                    return true;
+                }),
+                argThat(hitParams -> {
+                    assertAll(
+                            () -> assertThat(hitParams.uri()).isEqualTo(API_PREFIX + "/" + EVENT_ID),
+                            () -> assertThat(hitParams.ip()).isEqualTo("127.0.0.1")
+                    );
+                    return true;
+                })
+        );
+    }
+
+    @Test
+    void testFindByIdPublicWithIncorrectId() throws Exception {
+        mockMvc.perform(get(API_PREFIX + "/incorretId"))
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(eventService);

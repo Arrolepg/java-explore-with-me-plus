@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.service.category.model.Category;
 import ru.practicum.ewm.service.category.query.CategoryQuery;
+import ru.practicum.ewm.service.common.PaginationParams;
 import ru.practicum.ewm.service.event.dto.request.EventLocationUpdateDto;
 import ru.practicum.ewm.service.event.dto.request.EventRequestStatusUpdateRequest;
 import ru.practicum.ewm.service.event.dto.request.NewEventDto;
@@ -228,6 +229,19 @@ public class EventServiceImpl implements EventService {
         return EventMapper.toListEventShortDto(events, confirmedMap, viewsMap);
     }
 
+    @Override
+    public EventFullDto findByIdPublic(Long eventId, EventStatsHitParams hitParams) {
+        Event event = findFullEvent(eventId);
+        checkPublishedEvent(event);
+
+        eventStatsAdapter.createHit(hitParams.uri(), hitParams.ip());
+
+        long confirmedRequests = requestQuery.countRequestsByEventIdAndStatus(event.getId(), RequestStatus.CONFIRMED);
+        Long views = eventStatsAdapter.getViews(event.getId());
+
+        return EventMapper.toEventFullDto(event, confirmedRequests, views);
+    }
+
     private void checkInitiator(Long initiatorId, Long userId) {
         if (!initiatorId.equals(userId)) {
             throw new ConflictException("Пользователь не является инициатором события");
@@ -353,5 +367,11 @@ public class EventServiceImpl implements EventService {
             // запрос на все строки по условиям с дальнейшей сортировкой и отсечением в памяти, т к VIEWS нет в БД
             case VIEWS -> Pageable.unpaged(SORT_BY_ID_ASC);
         };
+    }
+
+    private void checkPublishedEvent(Event event) {
+        if (event.getPublishedOn() == null || event.getState() != EventState.PUBLISHED) {
+            throw new NotFoundException("Событие с id = " + event.getId() + " не найдено");
+        }
     }
 }

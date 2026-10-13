@@ -16,7 +16,7 @@ import ru.practicum.ewm.service.event.dto.response.EventFullDto;
 import ru.practicum.ewm.service.event.dto.response.EventRequestStatusUpdateResult;
 import ru.practicum.ewm.service.event.model.EventState;
 import ru.practicum.ewm.service.event.service.EventService;
-import ru.practicum.ewm.service.event.utility.PaginationParams;
+import ru.practicum.ewm.service.common.PaginationParams;
 import ru.practicum.ewm.service.event.utility.ResourceReference;
 import ru.practicum.ewm.service.exception.ConflictException;
 import ru.practicum.ewm.service.exception.NotFoundException;
