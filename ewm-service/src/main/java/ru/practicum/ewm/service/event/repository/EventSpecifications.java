@@ -145,7 +145,11 @@ public class EventSpecifications {
     }
 
     private Specification<Event> onlyPublished() {
-        return (root, query, criteriaBuilder) ->
-                criteriaBuilder.isNotNull(root.get(Event_.PUBLISHED_ON));
+        return (root, query, criteriaBuilder) -> {
+            Predicate publishedOn = criteriaBuilder.isNotNull(root.get(Event_.PUBLISHED_ON));
+            Predicate state = criteriaBuilder.equal(root.get(Event_.STATE), EventState.PUBLISHED);
+
+            return criteriaBuilder.and(publishedOn, state);
+        };
     }
 }
