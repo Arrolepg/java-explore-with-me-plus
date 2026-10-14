@@ -8,7 +8,7 @@ import ru.practicum.ewm.service.event.dto.request.UpdateEventAdminRequest;
 import ru.practicum.ewm.service.event.dto.response.EventFullDto;
 import ru.practicum.ewm.service.event.service.EventService;
 import ru.practicum.ewm.service.event.utility.AdminEventSearchFilter;
-import ru.practicum.ewm.service.common.PaginationParams;
+import ru.practicum.ewm.service.event.utility.EventPaginationParams;
 
 import java.util.List;
 
@@ -22,13 +22,13 @@ public class AdminEventController {
     @GetMapping
     public List<EventFullDto> findAll(
             @Valid @ModelAttribute AdminEventSearchFilter searchFilter,
-            @Valid @ModelAttribute PaginationParams paginationParams) {
+            @Valid @ModelAttribute EventPaginationParams eventPaginationParams) {
         log.info("Получен запрос администратора на поиск событий: users = {}, states = {}, categories = {}, "
                 + "rangeStart = {}, rangeEnd = {}, from = {}, size = {}",
                 searchFilter.users(), searchFilter.states(), searchFilter.categories(), searchFilter.rangeStart(),
-                searchFilter.rangeEnd(), paginationParams.from(), paginationParams.size());
+                searchFilter.rangeEnd(), eventPaginationParams.from(), eventPaginationParams.size());
 
-        return eventService.findAllByAdmin(searchFilter, paginationParams);
+        return eventService.findAllByAdmin(searchFilter, eventPaginationParams);
     }
 
     @PatchMapping("/{eventId}")

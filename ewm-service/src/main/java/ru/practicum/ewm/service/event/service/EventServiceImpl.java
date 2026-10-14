@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.service.category.model.Category;
 import ru.practicum.ewm.service.category.query.CategoryQuery;
-import ru.practicum.ewm.service.common.PaginationParams;
+import ru.practicum.ewm.service.event.utility.EventPaginationParams;
 import ru.practicum.ewm.service.event.dto.request.EventLocationUpdateDto;
 import ru.practicum.ewm.service.event.dto.request.EventRequestStatusUpdateRequest;
 import ru.practicum.ewm.service.event.dto.request.NewEventDto;
@@ -119,9 +119,9 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    public List<EventShortDto> findAllByInitiator(Long userId, PaginationParams paginationParams) {
+    public List<EventShortDto> findAllByInitiator(Long userId, EventPaginationParams eventPaginationParams) {
         userQuery.checkUserExists(userId);
-        Pageable pageable = toPageable(paginationParams);
+        Pageable pageable = toPageable(eventPaginationParams);
 
         List<Event> events = eventRepository.findEventsByInitiatorIdWithFetch(userId, pageable);
         if (events.isEmpty()) {
@@ -152,11 +152,11 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    public List<EventFullDto> findAllByAdmin(AdminEventSearchFilter searchFilter, PaginationParams paginationParams) {
+    public List<EventFullDto> findAllByAdmin(AdminEventSearchFilter searchFilter, EventPaginationParams eventPaginationParams) {
         validateSearchRequestDateRange(searchFilter.rangeStart(), searchFilter.rangeEnd());
 
         List<Event> events = eventRepository.findAllWithFetch(EventSpecifications.forAdminSearch(searchFilter),
-                toPageable(paginationParams));
+                toPageable(eventPaginationParams));
         if (events.isEmpty()) {
             return List.of();
         }
@@ -194,11 +194,11 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    public List<EventShortDto> findAllPublic(PublicEventSearchFilter searchFilter, PaginationParams paginationParams,
+    public List<EventShortDto> findAllPublic(PublicEventSearchFilter searchFilter, EventPaginationParams eventPaginationParams,
                                              EventStatsHitParams hitParams) {
         validateSearchRequestDateRange(searchFilter.rangeStart(), searchFilter.rangeEnd());
 
-        Pageable pageable = toPageable(paginationParams);
+        Pageable pageable = toPageable(eventPaginationParams);
         Specification<Event> specification = EventSpecifications.forPublicSearch(searchFilter);
         List<Event> events = eventRepository.findAllWithFetch(specification, pageable);
         if (events.isEmpty()) {
@@ -214,13 +214,13 @@ public class EventServiceImpl implements EventService {
         );
         Map<Long, Long> viewsMap = eventStatsAdapter.getViews(eventsIds);
 
-        if (paginationParams.sort() == EventSearchSort.VIEWS) {
+        if (eventPaginationParams.sort() == EventSearchSort.VIEWS) {
             events = events.stream()
                     .sorted(Comparator.comparingLong(
                             (Event e) -> viewsMap.getOrDefault(e.getId(), 0L)
                     ).reversed())
-                    .skip(paginationParams.from())
-                    .limit(paginationParams.size())
+                    .skip(eventPaginationParams.from())
+                    .limit(eventPaginationParams.size())
                     .toList();
         }
 
@@ -351,18 +351,18 @@ public class EventServiceImpl implements EventService {
         }
     }
 
-    private Pageable toPageable(PaginationParams paginationParams) {
-        if (paginationParams.sort() == null) {
+    private Pageable toPageable(EventPaginationParams eventPaginationParams) {
+        if (eventPaginationParams.sort() == null) {
             return PageRequest.of(
-                    paginationParams.from() / paginationParams.size(),
-                    paginationParams.size(),
+                    eventPaginationParams.from() / eventPaginationParams.size(),
+                    eventPaginationParams.size(),
                     SORT_BY_ID_ASC);
         }
 
-        return switch (paginationParams.sort()) {
+        return switch (eventPaginationParams.sort()) {
             case EVENT_DATE -> PageRequest.of(
-                    paginationParams.from() / paginationParams.size(),
-                    paginationParams.size(),
+                    eventPaginationParams.from() / eventPaginationParams.size(),
+                    eventPaginationParams.size(),
                     Sort.by(Sort.Direction.DESC, Event_.EVENT_DATE));
             // запрос на все строки по условиям с дальнейшей сортировкой и отсечением в памяти, т к VIEWS нет в БД
             case VIEWS -> Pageable.unpaged(SORT_BY_ID_ASC);

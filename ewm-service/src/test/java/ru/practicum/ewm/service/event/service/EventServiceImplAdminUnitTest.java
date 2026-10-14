@@ -20,7 +20,7 @@ import ru.practicum.ewm.service.event.model.EventLocation;
 import ru.practicum.ewm.service.event.model.EventState;
 import ru.practicum.ewm.service.event.repository.EventRepository;
 import ru.practicum.ewm.service.event.utility.AdminEventSearchFilter;
-import ru.practicum.ewm.service.common.PaginationParams;
+import ru.practicum.ewm.service.event.utility.EventPaginationParams;
 import ru.practicum.ewm.service.exception.BadRequestException;
 import ru.practicum.ewm.service.exception.ConflictException;
 import ru.practicum.ewm.service.exception.NotFoundException;
@@ -92,7 +92,7 @@ public class EventServiceImplAdminUnitTest {
     void testFindAllWithStartAfterEndThrowsBadRequest() {
         AdminEventSearchFilter request = new AdminEventSearchFilter(null, null, null,
                 LocalDateTime.of(2031, 1, 1, 0, 0), LocalDateTime.of(2030, 1, 1, 0, 0));
-        PaginationParams params = params();
+        EventPaginationParams params = params();
 
         assertThatThrownBy(() -> eventService.findAllByAdmin(request, params))
                 .isInstanceOf(BadRequestException.class);
@@ -214,8 +214,8 @@ public class EventServiceImplAdminUnitTest {
         return new AdminEventSearchFilter(null, null, null, null, null);
     }
 
-    private PaginationParams params() {
-        return new PaginationParams(0, 10, null);
+    private EventPaginationParams params() {
+        return new EventPaginationParams(0, 10, null);
     }
 
     private UpdateEventAdminRequest stateAction(AdminEventStateAction stateAction) {

@@ -14,7 +14,7 @@ import ru.practicum.ewm.service.event.model.AdminEventStateAction;
 import ru.practicum.ewm.service.event.model.EventState;
 import ru.practicum.ewm.service.event.service.EventService;
 import ru.practicum.ewm.service.event.utility.AdminEventSearchFilter;
-import ru.practicum.ewm.service.common.PaginationParams;
+import ru.practicum.ewm.service.event.utility.EventPaginationParams;
 import ru.practicum.ewm.service.exception.ConflictException;
 import ru.practicum.ewm.service.exception.NotFoundException;
 import ru.practicum.ewm.service.user.dto.UserShortDto;
@@ -49,7 +49,7 @@ public class AdminEventControllerTest {
 
     @Test
     void testFindAllWithAllParams() throws Exception {
-        when(eventService.findAllByAdmin(any(AdminEventSearchFilter.class), any(PaginationParams.class)))
+        when(eventService.findAllByAdmin(any(AdminEventSearchFilter.class), any(EventPaginationParams.class)))
                 .thenReturn(List.of(createEventFullDto(EventState.PENDING)));
 
         mockMvc.perform(get(API_PREFIX)
@@ -90,7 +90,7 @@ public class AdminEventControllerTest {
 
     @Test
     void testFindAllWithoutParamsUsesDefaults() throws Exception {
-        when(eventService.findAllByAdmin(any(AdminEventSearchFilter.class), any(PaginationParams.class))).thenReturn(List.of());
+        when(eventService.findAllByAdmin(any(AdminEventSearchFilter.class), any(EventPaginationParams.class))).thenReturn(List.of());
 
         mockMvc.perform(get(API_PREFIX))
                 .andExpectAll(

@@ -8,7 +8,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import ru.practicum.ewm.service.event.model.EventSearchSort;
 import ru.practicum.ewm.service.event.service.EventService;
 import ru.practicum.ewm.service.event.utility.EventStatsHitParams;
-import ru.practicum.ewm.service.common.PaginationParams;
+import ru.practicum.ewm.service.event.utility.EventPaginationParams;
 import ru.practicum.ewm.service.event.utility.PublicEventSearchFilter;
 
 import java.time.LocalDateTime;
@@ -36,7 +36,7 @@ public class PublicEventControllerTest {
     @Test
     void testFindAllWithAllParams() throws Exception {
         when(eventService.findAllPublic(any(PublicEventSearchFilter.class),
-                any(PaginationParams.class),
+                any(EventPaginationParams.class),
                 any(EventStatsHitParams.class)))
                 .thenReturn(List.of());
 
@@ -88,7 +88,7 @@ public class PublicEventControllerTest {
     @Test
     void testFindAllWithDefaultsValues() throws Exception {
         when(eventService.findAllPublic(any(PublicEventSearchFilter.class),
-                any(PaginationParams.class),
+                any(EventPaginationParams.class),
                 any(EventStatsHitParams.class)))
                 .thenReturn(List.of());
 

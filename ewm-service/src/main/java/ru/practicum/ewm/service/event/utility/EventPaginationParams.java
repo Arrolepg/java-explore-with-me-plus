@@ -1,9 +1,9 @@
-package ru.practicum.ewm.service.common;
+package ru.practicum.ewm.service.event.utility;
 
 import jakarta.validation.constraints.Min;
 import ru.practicum.ewm.service.event.model.EventSearchSort;
 
-public record PaginationParams(
+public record EventPaginationParams(
         @Min(value = 0, message = "Параметр from не может быть отрицательным")
         Integer from,
 
@@ -12,7 +12,7 @@ public record PaginationParams(
 
         EventSearchSort sort
 ) {
-        public PaginationParams {
+        public EventPaginationParams {
                 if (from == null) from = 0;
                 if (size == null) size = 10;
         }

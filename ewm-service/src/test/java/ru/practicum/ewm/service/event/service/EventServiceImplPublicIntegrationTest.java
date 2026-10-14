@@ -18,7 +18,7 @@ import ru.practicum.ewm.service.event.model.EventSearchSort;
 import ru.practicum.ewm.service.event.model.EventState;
 import ru.practicum.ewm.service.event.repository.EventRepository;
 import ru.practicum.ewm.service.event.utility.EventStatsHitParams;
-import ru.practicum.ewm.service.common.PaginationParams;
+import ru.practicum.ewm.service.event.utility.EventPaginationParams;
 import ru.practicum.ewm.service.event.utility.PublicEventSearchFilter;
 import ru.practicum.ewm.service.exception.NotFoundException;
 import ru.practicum.ewm.service.request.model.Request;
@@ -413,8 +413,8 @@ class EventServiceImplPublicIntegrationTest {
         return new PublicEventSearchFilter(text, categories, paid, rangeStart, rangeEnd, onlyAvailable);
     }
 
-    private PaginationParams params(int from, int size, EventSearchSort sort) {
-        return new PaginationParams(from, size, sort);
+    private EventPaginationParams params(int from, int size, EventSearchSort sort) {
+        return new EventPaginationParams(from, size, sort);
     }
 
     private EventStatsHitParams hit() {

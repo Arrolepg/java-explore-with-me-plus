@@ -18,7 +18,7 @@ import ru.practicum.ewm.service.event.model.EventLocation;
 import ru.practicum.ewm.service.event.model.EventState;
 import ru.practicum.ewm.service.event.repository.EventRepository;
 import ru.practicum.ewm.service.event.utility.AdminEventSearchFilter;
-import ru.practicum.ewm.service.common.PaginationParams;
+import ru.practicum.ewm.service.event.utility.EventPaginationParams;
 import ru.practicum.ewm.service.user.model.User;
 import ru.practicum.ewm.service.user.repository.UserRepository;
 
@@ -138,7 +138,7 @@ public class EventServiceImplAdminIntegrationTest {
     void testFindAllWithPagination() {
         List<EventFullDto> result = eventService.findAllByAdmin(
                 new AdminEventSearchFilter(null, null, null, null, null),
-                new PaginationParams(2, 2, null));
+                new EventPaginationParams(2, 2, null));
 
         assertThat(result).extracting(EventFullDto::getId).containsExactly(bobCanceledConcert.getId());
     }
@@ -176,8 +176,8 @@ public class EventServiceImplAdminIntegrationTest {
         return new AdminEventSearchFilter(users, states, categories, rangeStart, rangeEnd);
     }
 
-    private PaginationParams params() {
-        return new PaginationParams(0, 10, null);
+    private EventPaginationParams params() {
+        return new EventPaginationParams(0, 10, null);
     }
 
     private User createUser(String name, String email) {

@@ -16,7 +16,7 @@ import ru.practicum.ewm.service.event.dto.response.EventFullDto;
 import ru.practicum.ewm.service.event.dto.response.EventRequestStatusUpdateResult;
 import ru.practicum.ewm.service.event.model.EventState;
 import ru.practicum.ewm.service.event.service.EventService;
-import ru.practicum.ewm.service.common.PaginationParams;
+import ru.practicum.ewm.service.event.utility.EventPaginationParams;
 import ru.practicum.ewm.service.event.utility.ResourceReference;
 import ru.practicum.ewm.service.exception.ConflictException;
 import ru.practicum.ewm.service.exception.NotFoundException;
@@ -55,7 +55,7 @@ public class PrivateEventControllerTest {
 
     @Test
     void testFindAll() throws Exception {
-        when(eventService.findAllByInitiator(eq(USER_ID), any(PaginationParams.class)))
+        when(eventService.findAllByInitiator(eq(USER_ID), any(EventPaginationParams.class)))
                 .thenReturn(List.of());
 
         mockMvc.perform(get(API_PREFIX, USER_ID))
@@ -63,26 +63,26 @@ public class PrivateEventControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.length()").value(0));
 
-        verify(eventService, times(1)).findAllByInitiator(eq(USER_ID), any(PaginationParams.class));
+        verify(eventService, times(1)).findAllByInitiator(eq(USER_ID), any(EventPaginationParams.class));
         verifyNoMoreInteractions(eventService);
     }
 
     @Test
     void testFindAllEmpty() throws Exception {
-        when(eventService.findAllByInitiator(eq(USER_ID), any(PaginationParams.class)))
+        when(eventService.findAllByInitiator(eq(USER_ID), any(EventPaginationParams.class)))
                 .thenReturn(List.of());
 
         mockMvc.perform(get(API_PREFIX, USER_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
 
-        verify(eventService, times(1)).findAllByInitiator(eq(USER_ID), any(PaginationParams.class));
+        verify(eventService, times(1)).findAllByInitiator(eq(USER_ID), any(EventPaginationParams.class));
         verifyNoMoreInteractions(eventService);
     }
 
     @Test
     void testFindAllWithCustomParams() throws Exception {
-        when(eventService.findAllByInitiator(eq(USER_ID), any(PaginationParams.class)))
+        when(eventService.findAllByInitiator(eq(USER_ID), any(EventPaginationParams.class)))
                 .thenReturn(List.of());
 
         mockMvc.perform(get(API_PREFIX, USER_ID)
@@ -90,19 +90,19 @@ public class PrivateEventControllerTest {
                         .param("size", "20"))
                 .andExpect(status().isOk());
 
-        verify(eventService, times(1)).findAllByInitiator(eq(USER_ID), any(PaginationParams.class));
+        verify(eventService, times(1)).findAllByInitiator(eq(USER_ID), any(EventPaginationParams.class));
         verifyNoMoreInteractions(eventService);
     }
 
     @Test
     void testFindAllUserNotFound() throws Exception {
-        when(eventService.findAllByInitiator(eq(99L), any(PaginationParams.class)))
+        when(eventService.findAllByInitiator(eq(99L), any(EventPaginationParams.class)))
                 .thenThrow(new NotFoundException(""));
 
         mockMvc.perform(get(API_PREFIX, 99L))
                 .andExpect(status().isNotFound());
 
-        verify(eventService, times(1)).findAllByInitiator(eq(99L), any(PaginationParams.class));
+        verify(eventService, times(1)).findAllByInitiator(eq(99L), any(EventPaginationParams.class));
         verifyNoMoreInteractions(eventService);
     }
 

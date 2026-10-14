@@ -22,7 +22,7 @@ import ru.practicum.ewm.service.event.model.EventState;
 import ru.practicum.ewm.service.event.model.UserEventStateAction;
 import ru.practicum.ewm.service.event.query.EventQuery;
 import ru.practicum.ewm.service.event.repository.EventRepository;
-import ru.practicum.ewm.service.common.PaginationParams;
+import ru.practicum.ewm.service.event.utility.EventPaginationParams;
 import ru.practicum.ewm.service.adapter.EventStatsAdapter;
 import ru.practicum.ewm.service.event.utility.ResourceReference;
 import ru.practicum.ewm.service.exception.ConflictException;
@@ -335,7 +335,7 @@ public class EventServiceImplUnitTest {
         when(eventStatsAdapter.getViews(anyList())).thenReturn(Map.of(EVENT_ID, 7L));
 
         List<EventShortDto> result = eventService.findAllByInitiator(USER_ID,
-                new PaginationParams(0, 10, null));
+                new EventPaginationParams(0, 10, null));
 
         assertThat(result).hasSize(1);
         assertThat(result.getFirst().getId()).isEqualTo(EVENT_ID);
@@ -354,7 +354,7 @@ public class EventServiceImplUnitTest {
                 .thenReturn(List.of());
 
         List<EventShortDto> result = eventService.findAllByInitiator(USER_ID,
-                new PaginationParams(0, 10, null));
+                new EventPaginationParams(0, 10, null));
 
         assertThat(result).isEmpty();
 
@@ -368,7 +368,7 @@ public class EventServiceImplUnitTest {
         doThrow(new NotFoundException("")).when(userQuery).checkUserExists(99L);
 
         assertThatThrownBy(() -> eventService.findAllByInitiator(99L,
-                new PaginationParams(0, 10, null)))
+                new EventPaginationParams(0, 10, null)))
                 .isInstanceOf(NotFoundException.class);
 
         verify(eventRepository, never()).findEventsByInitiatorIdWithFetch(any(), any());

@@ -10,7 +10,7 @@ import ru.practicum.ewm.service.event.dto.response.EventShortDto;
 import ru.practicum.ewm.service.event.service.EventService;
 import ru.practicum.ewm.service.event.utility.EventStatsHitParams;
 import ru.practicum.ewm.service.event.utility.PublicEventSearchFilter;
-import ru.practicum.ewm.service.common.PaginationParams;
+import ru.practicum.ewm.service.event.utility.EventPaginationParams;
 
 import java.util.List;
 
@@ -25,13 +25,13 @@ public class PublicEventController {
 
     @GetMapping
     public List<EventShortDto> findAll(@Valid @ModelAttribute PublicEventSearchFilter searchFilter,
-                                       @Valid @ModelAttribute PaginationParams paginationParams,
+                                       @Valid @ModelAttribute EventPaginationParams eventPaginationParams,
                                        HttpServletRequest httpServletRequest) {
         log.info("Получен запрос на поиск всех событий");
 
         EventStatsHitParams hitParams = new EventStatsHitParams(URI, httpServletRequest.getRemoteAddr());
 
-        return eventService.findAllPublic(searchFilter, paginationParams, hitParams);
+        return eventService.findAllPublic(searchFilter, eventPaginationParams, hitParams);
     }
 
     @GetMapping("/{eventId}")

@@ -1,6 +1,6 @@
 package ru.practicum.ewm.service.event.service;
 
-import ru.practicum.ewm.service.common.PaginationParams;
+import ru.practicum.ewm.service.event.utility.EventPaginationParams;
 import ru.practicum.ewm.service.event.dto.request.EventRequestStatusUpdateRequest;
 import ru.practicum.ewm.service.event.dto.request.NewEventDto;
 import ru.practicum.ewm.service.event.dto.request.UpdateEventAdminRequest;
@@ -23,15 +23,15 @@ public interface EventService {
     EventRequestStatusUpdateResult updateRequests(ResourceReference resourceReference,
                                                   EventRequestStatusUpdateRequest statusUpdateRequestDto);
 
-    List<EventShortDto> findAllByInitiator(Long userId, PaginationParams paginationParams);
+    List<EventShortDto> findAllByInitiator(Long userId, EventPaginationParams eventPaginationParams);
 
     EventFullDto findById(ResourceReference resourceReference);
 
-    List<EventFullDto> findAllByAdmin(AdminEventSearchFilter searchFilter, PaginationParams paginationParams);
+    List<EventFullDto> findAllByAdmin(AdminEventSearchFilter searchFilter, EventPaginationParams eventPaginationParams);
 
     EventFullDto updateByAdmin(Long eventId, UpdateEventAdminRequest eventDto);
 
-    List<EventShortDto> findAllPublic(PublicEventSearchFilter searchFilter, PaginationParams paginationParams,
+    List<EventShortDto> findAllPublic(PublicEventSearchFilter searchFilter, EventPaginationParams eventPaginationParams,
                                       EventStatsHitParams hitParams);
 
     EventFullDto findByIdPublic(Long eventId, EventStatsHitParams hitParams);
