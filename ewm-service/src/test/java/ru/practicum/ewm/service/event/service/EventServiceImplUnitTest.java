@@ -22,7 +22,7 @@ import ru.practicum.ewm.service.event.model.EventState;
 import ru.practicum.ewm.service.event.model.UserEventStateAction;
 import ru.practicum.ewm.service.event.query.EventQuery;
 import ru.practicum.ewm.service.event.repository.EventRepository;
-import ru.practicum.ewm.service.event.utility.PrivateEventSearchRequest;
+import ru.practicum.ewm.service.event.utility.EventPaginationParams;
 import ru.practicum.ewm.service.adapter.EventStatsAdapter;
 import ru.practicum.ewm.service.event.utility.ResourceReference;
 import ru.practicum.ewm.service.exception.ConflictException;
@@ -117,12 +117,12 @@ public class EventServiceImplUnitTest {
 
     @Test
     void testUpdate() {
-        Event event = createEvent(EVENT_ID, USER_ID, EventState.PENDING);
+        Event event = createEvent(USER_ID, EventState.PENDING);
         Category category = createCategory();
         when(eventRepository.findByIdWithFetch(EVENT_ID)).thenReturn(Optional.of(event));
         when(categoryQuery.findCategory(CATEGORY_ID)).thenReturn(category);
         when(requestQuery.countRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.CONFIRMED)).thenReturn(5L);
-        when(eventStatsAdapter.getViews(event)).thenReturn(10L);
+        when(eventStatsAdapter.getViews(event.getId())).thenReturn(10L);
 
         EventFullDto result = eventService.update(
                 new ResourceReference(USER_ID, EVENT_ID), createUpdateEventUserRequest());
@@ -134,7 +134,7 @@ public class EventServiceImplUnitTest {
         verify(userQuery, times(1)).checkUserExists(USER_ID);
         verify(eventRepository, times(1)).findByIdWithFetch(EVENT_ID);
         verify(requestQuery, times(1)).countRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.CONFIRMED);
-        verify(eventStatsAdapter, times(1)).getViews(event);
+        verify(eventStatsAdapter, times(1)).getViews(event.getId());
     }
 
     @Test
@@ -158,12 +158,12 @@ public class EventServiceImplUnitTest {
 
         verify(userQuery, times(1)).checkUserExists(USER_ID);
         verify(requestQuery, never()).countRequestsByEventIdAndStatus(any(), any());
-        verify(eventStatsAdapter, never()).getViews(any(Event.class));
+        verify(eventStatsAdapter, never()).getViews(any(Long.class));
     }
 
     @Test
     void testUpdateNotInitiator() {
-        Event event = createEvent(EVENT_ID, OTHER_USER_ID, EventState.PENDING);
+        Event event = createEvent(OTHER_USER_ID, EventState.PENDING);
         when(eventRepository.findByIdWithFetch(EVENT_ID)).thenReturn(Optional.of(event));
 
         assertThatThrownBy(() -> eventService.update(
@@ -175,7 +175,7 @@ public class EventServiceImplUnitTest {
 
     @Test
     void testUpdatePublishedState() {
-        Event event = createEvent(EVENT_ID, USER_ID, EventState.PUBLISHED);
+        Event event = createEvent(USER_ID, EventState.PUBLISHED);
         when(eventRepository.findByIdWithFetch(EVENT_ID)).thenReturn(Optional.of(event));
 
         assertThatThrownBy(() -> eventService.update(
@@ -187,12 +187,12 @@ public class EventServiceImplUnitTest {
 
     @Test
     void testUpdateWithStateActionCancelReview() {
-        Event event = createEvent(EVENT_ID, USER_ID, EventState.PENDING);
+        Event event = createEvent(USER_ID, EventState.PENDING);
         Category category = createCategory();
         when(eventRepository.findByIdWithFetch(EVENT_ID)).thenReturn(Optional.of(event));
         when(categoryQuery.findCategory(CATEGORY_ID)).thenReturn(category);
         when(requestQuery.countRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.CONFIRMED)).thenReturn(0L);
-        when(eventStatsAdapter.getViews(event)).thenReturn(0L);
+        when(eventStatsAdapter.getViews(event.getId())).thenReturn(0L);
 
         UpdateEventUserRequest dto = createUpdateEventUserRequest();
         dto.setStateAction(UserEventStateAction.CANCEL_REVIEW);
@@ -204,7 +204,7 @@ public class EventServiceImplUnitTest {
 
     @Test
     void testFindRequests() {
-        Event event = createEvent(EVENT_ID, USER_ID, EventState.PENDING);
+        Event event = createEvent(USER_ID, EventState.PENDING);
         when(eventQuery.findEvent(EVENT_ID)).thenReturn(event);
         when(requestQuery.findRequests(EVENT_ID)).thenReturn(List.of(createParticipationRequestDto()));
 
@@ -242,7 +242,7 @@ public class EventServiceImplUnitTest {
 
     @Test
     void testFindRequestsNotInitiator() {
-        Event event = createEvent(EVENT_ID, OTHER_USER_ID, EventState.PENDING);
+        Event event = createEvent(OTHER_USER_ID, EventState.PENDING);
         when(eventQuery.findEvent(EVENT_ID)).thenReturn(event);
 
         assertThatThrownBy(() -> eventService.findRequests(new ResourceReference(USER_ID, EVENT_ID)))
@@ -253,7 +253,7 @@ public class EventServiceImplUnitTest {
 
     @Test
     void testUpdateRequestDelegatesToCommandService() {
-        Event event = createEvent(EVENT_ID, USER_ID, EventState.PENDING);
+        Event event = createEvent(USER_ID, EventState.PENDING);
         event.setParticipantLimit(10);
         when(eventQuery.findEvent(EVENT_ID)).thenReturn(event);
 
@@ -313,7 +313,7 @@ public class EventServiceImplUnitTest {
 
     @Test
     void testUpdateRequestNotInitiator() {
-        Event event = createEvent(EVENT_ID, OTHER_USER_ID, EventState.PENDING);
+        Event event = createEvent(OTHER_USER_ID, EventState.PENDING);
         when(eventQuery.findEvent(EVENT_ID)).thenReturn(event);
 
         assertThatThrownBy(() -> eventService.updateRequests(
@@ -326,16 +326,16 @@ public class EventServiceImplUnitTest {
     }
 
     @Test
-    void testFindAll() {
-        Event event = createEvent(EVENT_ID, USER_ID, EventState.PENDING);
+    void testFindAllByInitiator() {
+        Event event = createEvent(USER_ID, EventState.PENDING);
         when(eventRepository.findEventsByInitiatorIdWithFetch(eq(USER_ID), any(Pageable.class)))
                 .thenReturn(List.of(event));
         when(requestQuery.countRequestsByEventIdsAndStatus(anyList(), eq(RequestStatus.CONFIRMED)))
                 .thenReturn(Map.of(EVENT_ID, 3L));
         when(eventStatsAdapter.getViews(anyList())).thenReturn(Map.of(EVENT_ID, 7L));
 
-        List<EventShortDto> result = eventService.findAll(USER_ID,
-                new PrivateEventSearchRequest(0, 10));
+        List<EventShortDto> result = eventService.findAllByInitiator(USER_ID,
+                new EventPaginationParams(0, 10, null));
 
         assertThat(result).hasSize(1);
         assertThat(result.getFirst().getId()).isEqualTo(EVENT_ID);
@@ -349,12 +349,12 @@ public class EventServiceImplUnitTest {
     }
 
     @Test
-    void testFindAllEmpty() {
+    void testFindAllByInitiatorEmpty() {
         when(eventRepository.findEventsByInitiatorIdWithFetch(eq(USER_ID), any(Pageable.class)))
                 .thenReturn(List.of());
 
-        List<EventShortDto> result = eventService.findAll(USER_ID,
-                new PrivateEventSearchRequest(0, 10));
+        List<EventShortDto> result = eventService.findAllByInitiator(USER_ID,
+                new EventPaginationParams(0, 10, null));
 
         assertThat(result).isEmpty();
 
@@ -364,11 +364,11 @@ public class EventServiceImplUnitTest {
     }
 
     @Test
-    void testFindAllUserNotFound() {
+    void testFindAllByInitiatorUserNotFound() {
         doThrow(new NotFoundException("")).when(userQuery).checkUserExists(99L);
 
-        assertThatThrownBy(() -> eventService.findAll(99L,
-                new PrivateEventSearchRequest(0, 10)))
+        assertThatThrownBy(() -> eventService.findAllByInitiator(99L,
+                new EventPaginationParams(0, 10, null)))
                 .isInstanceOf(NotFoundException.class);
 
         verify(eventRepository, never()).findEventsByInitiatorIdWithFetch(any(), any());
@@ -376,10 +376,10 @@ public class EventServiceImplUnitTest {
 
     @Test
     void testFindById() {
-        Event event = createEvent(EVENT_ID, USER_ID, EventState.PENDING);
+        Event event = createEvent(USER_ID, EventState.PENDING);
         when(eventRepository.findByIdWithFetch(EVENT_ID)).thenReturn(Optional.of(event));
         when(requestQuery.countRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.CONFIRMED)).thenReturn(3L);
-        when(eventStatsAdapter.getViews(event)).thenReturn(7L);
+        when(eventStatsAdapter.getViews(event.getId())).thenReturn(7L);
 
         EventFullDto result = eventService.findById(new ResourceReference(USER_ID, EVENT_ID));
 
@@ -413,7 +413,7 @@ public class EventServiceImplUnitTest {
 
     @Test
     void testFindByIdNotInitiator() {
-        Event event = createEvent(EVENT_ID, OTHER_USER_ID, EventState.PENDING);
+        Event event = createEvent(OTHER_USER_ID, EventState.PENDING);
         when(eventRepository.findByIdWithFetch(EVENT_ID)).thenReturn(Optional.of(event));
 
         assertThatThrownBy(() -> eventService.findById(new ResourceReference(USER_ID, EVENT_ID)))
@@ -424,12 +424,12 @@ public class EventServiceImplUnitTest {
 
     @Test
     void testUpdateLocationBothFields() {
-        Event event = createEvent(EVENT_ID, USER_ID, EventState.PENDING);
+        Event event = createEvent(USER_ID, EventState.PENDING);
         Category category = createCategory();
         when(eventRepository.findByIdWithFetch(EVENT_ID)).thenReturn(Optional.of(event));
         when(categoryQuery.findCategory(CATEGORY_ID)).thenReturn(category);
         when(requestQuery.countRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.CONFIRMED)).thenReturn(0L);
-        when(eventStatsAdapter.getViews(event)).thenReturn(0L);
+        when(eventStatsAdapter.getViews(event.getId())).thenReturn(0L);
 
         UpdateEventUserRequest dto = createUpdateEventUserRequest();
         EventLocationUpdateDto locationDto = new EventLocationUpdateDto();
@@ -445,13 +445,13 @@ public class EventServiceImplUnitTest {
 
     @Test
     void testUpdateLocationOnlyLat() {
-        Event event = createEvent(EVENT_ID, USER_ID, EventState.PENDING);
+        Event event = createEvent(USER_ID, EventState.PENDING);
         Float oldLon = event.getEventLocation().getLon();
         Category category = createCategory();
         when(eventRepository.findByIdWithFetch(EVENT_ID)).thenReturn(Optional.of(event));
         when(categoryQuery.findCategory(CATEGORY_ID)).thenReturn(category);
         when(requestQuery.countRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.CONFIRMED)).thenReturn(0L);
-        when(eventStatsAdapter.getViews(event)).thenReturn(0L);
+        when(eventStatsAdapter.getViews(event.getId())).thenReturn(0L);
 
         UpdateEventUserRequest dto = createUpdateEventUserRequest();
         EventLocationUpdateDto locationDto = new EventLocationUpdateDto();
@@ -467,13 +467,13 @@ public class EventServiceImplUnitTest {
 
     @Test
     void testUpdateLocationOnlyLon() {
-        Event event = createEvent(EVENT_ID, USER_ID, EventState.PENDING);
+        Event event = createEvent(USER_ID, EventState.PENDING);
         Float oldLat = event.getEventLocation().getLat();
         Category category = createCategory();
         when(eventRepository.findByIdWithFetch(EVENT_ID)).thenReturn(Optional.of(event));
         when(categoryQuery.findCategory(CATEGORY_ID)).thenReturn(category);
         when(requestQuery.countRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.CONFIRMED)).thenReturn(0L);
-        when(eventStatsAdapter.getViews(event)).thenReturn(0L);
+        when(eventStatsAdapter.getViews(event.getId())).thenReturn(0L);
 
         UpdateEventUserRequest dto = createUpdateEventUserRequest();
         EventLocationUpdateDto locationDto = new EventLocationUpdateDto();
@@ -489,14 +489,14 @@ public class EventServiceImplUnitTest {
 
     @Test
     void testUpdateLocationBothNull() {
-        Event event = createEvent(EVENT_ID, USER_ID, EventState.PENDING);
+        Event event = createEvent(USER_ID, EventState.PENDING);
         Float oldLat = event.getEventLocation().getLat();
         Float oldLon = event.getEventLocation().getLon();
         Category category = createCategory();
         when(eventRepository.findByIdWithFetch(EVENT_ID)).thenReturn(Optional.of(event));
         when(categoryQuery.findCategory(CATEGORY_ID)).thenReturn(category);
         when(requestQuery.countRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.CONFIRMED)).thenReturn(0L);
-        when(eventStatsAdapter.getViews(event)).thenReturn(0L);
+        when(eventStatsAdapter.getViews(event.getId())).thenReturn(0L);
 
         UpdateEventUserRequest dto = createUpdateEventUserRequest();
         EventLocationUpdateDto locationDto = new EventLocationUpdateDto();
@@ -525,9 +525,9 @@ public class EventServiceImplUnitTest {
         return category;
     }
 
-    private Event createEvent(Long id, Long initiatorId, EventState state) {
+    private Event createEvent(Long initiatorId, EventState state) {
         return Event.builder()
-                .id(id)
+                .id(EVENT_ID)
                 .annotation(ANNOTATION)
                 .category(createCategory())
                 .description(DESCRIPTION)

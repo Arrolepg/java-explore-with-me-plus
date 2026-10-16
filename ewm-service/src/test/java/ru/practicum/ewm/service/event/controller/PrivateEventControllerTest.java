@@ -14,10 +14,9 @@ import ru.practicum.ewm.service.event.dto.request.NewEventDto;
 import ru.practicum.ewm.service.event.dto.request.UpdateEventUserRequest;
 import ru.practicum.ewm.service.event.dto.response.EventFullDto;
 import ru.practicum.ewm.service.event.dto.response.EventRequestStatusUpdateResult;
-import ru.practicum.ewm.service.event.dto.response.EventShortDto;
 import ru.practicum.ewm.service.event.model.EventState;
 import ru.practicum.ewm.service.event.service.EventService;
-import ru.practicum.ewm.service.event.utility.PrivateEventSearchRequest;
+import ru.practicum.ewm.service.event.utility.EventPaginationParams;
 import ru.practicum.ewm.service.event.utility.ResourceReference;
 import ru.practicum.ewm.service.exception.ConflictException;
 import ru.practicum.ewm.service.exception.NotFoundException;
@@ -56,57 +55,54 @@ public class PrivateEventControllerTest {
 
     @Test
     void testFindAll() throws Exception {
-        when(eventService.findAll(eq(USER_ID), any(PrivateEventSearchRequest.class)))
-                .thenReturn(List.of(createEventShortDto()));
+        when(eventService.findAllByInitiator(eq(USER_ID), any(EventPaginationParams.class)))
+                .thenReturn(List.of());
 
         mockMvc.perform(get(API_PREFIX, USER_ID))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].id").value(EVENT_ID))
-                .andExpect(jsonPath("$[0].title").value(TITLE));
+                .andExpect(jsonPath("$.length()").value(0));
 
-        verify(eventService, times(1)).findAll(eq(USER_ID), any(PrivateEventSearchRequest.class));
+        verify(eventService, times(1)).findAllByInitiator(eq(USER_ID), any(EventPaginationParams.class));
         verifyNoMoreInteractions(eventService);
     }
 
     @Test
     void testFindAllEmpty() throws Exception {
-        when(eventService.findAll(eq(USER_ID), any(PrivateEventSearchRequest.class)))
+        when(eventService.findAllByInitiator(eq(USER_ID), any(EventPaginationParams.class)))
                 .thenReturn(List.of());
 
         mockMvc.perform(get(API_PREFIX, USER_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
 
-        verify(eventService, times(1)).findAll(eq(USER_ID), any(PrivateEventSearchRequest.class));
+        verify(eventService, times(1)).findAllByInitiator(eq(USER_ID), any(EventPaginationParams.class));
         verifyNoMoreInteractions(eventService);
     }
 
     @Test
     void testFindAllWithCustomParams() throws Exception {
-        when(eventService.findAll(eq(USER_ID), any(PrivateEventSearchRequest.class)))
+        when(eventService.findAllByInitiator(eq(USER_ID), any(EventPaginationParams.class)))
                 .thenReturn(List.of());
 
         mockMvc.perform(get(API_PREFIX, USER_ID)
                         .param("from", "5")
-                        .param("size", "20")
-                        .param("sort", "id,desc"))
+                        .param("size", "20"))
                 .andExpect(status().isOk());
 
-        verify(eventService, times(1)).findAll(eq(USER_ID), any(PrivateEventSearchRequest.class));
+        verify(eventService, times(1)).findAllByInitiator(eq(USER_ID), any(EventPaginationParams.class));
         verifyNoMoreInteractions(eventService);
     }
 
     @Test
     void testFindAllUserNotFound() throws Exception {
-        when(eventService.findAll(eq(99L), any(PrivateEventSearchRequest.class)))
+        when(eventService.findAllByInitiator(eq(99L), any(EventPaginationParams.class)))
                 .thenThrow(new NotFoundException(""));
 
         mockMvc.perform(get(API_PREFIX, 99L))
                 .andExpect(status().isNotFound());
 
-        verify(eventService, times(1)).findAll(eq(99L), any(PrivateEventSearchRequest.class));
+        verify(eventService, times(1)).findAllByInitiator(eq(99L), any(EventPaginationParams.class));
         verifyNoMoreInteractions(eventService);
     }
 
@@ -465,20 +461,6 @@ public class PrivateEventControllerTest {
 
         verify(eventService, times(1)).updateRequests(any(ResourceReference.class), any(EventRequestStatusUpdateRequest.class));
         verifyNoMoreInteractions(eventService);
-    }
-
-    private EventShortDto createEventShortDto() {
-        return EventShortDto.builder()
-                .id(EVENT_ID)
-                .annotation(ANNOTATION)
-                .category(createCategoryDto())
-                .confirmedRequests(0L)
-                .eventDate(LocalDateTime.now().plusDays(10))
-                .initiator(createUserShortDto())
-                .paid(false)
-                .title(TITLE)
-                .views(0L)
-                .build();
     }
 
     private EventFullDto createEventFullDto() {

@@ -4,10 +4,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.service.category.model.Category;
 import ru.practicum.ewm.service.category.query.CategoryQuery;
+import ru.practicum.ewm.service.event.utility.EventPaginationParams;
 import ru.practicum.ewm.service.event.dto.request.EventLocationUpdateDto;
 import ru.practicum.ewm.service.event.dto.request.EventRequestStatusUpdateRequest;
 import ru.practicum.ewm.service.event.dto.request.NewEventDto;
@@ -21,11 +23,8 @@ import ru.practicum.ewm.service.event.model.*;
 import ru.practicum.ewm.service.event.query.EventQuery;
 import ru.practicum.ewm.service.event.repository.EventRepository;
 import ru.practicum.ewm.service.event.repository.EventSpecifications;
-import ru.practicum.ewm.service.event.utility.AdminEventSearchRequest;
-import ru.practicum.ewm.service.event.utility.EventMapper;
-import ru.practicum.ewm.service.event.utility.PrivateEventSearchRequest;
+import ru.practicum.ewm.service.event.utility.*;
 import ru.practicum.ewm.service.adapter.EventStatsAdapter;
-import ru.practicum.ewm.service.event.utility.ResourceReference;
 import ru.practicum.ewm.service.exception.BadRequestException;
 import ru.practicum.ewm.service.exception.ConflictException;
 import ru.practicum.ewm.service.exception.NotFoundException;
@@ -39,6 +38,7 @@ import ru.practicum.ewm.service.user.model.User;
 import ru.practicum.ewm.service.user.query.UserQuery;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -83,7 +83,7 @@ public class EventServiceImpl implements EventService {
         applyUserStateAction(event, eventDto.getStateAction());
 
         long confirmedRequests = requestQuery.countRequestsByEventIdAndStatus(event.getId(), RequestStatus.CONFIRMED);
-        long views = eventStatsAdapter.getViews(event);
+        long views = eventStatsAdapter.getViews(event.getId());
 
         return EventMapper.toEventFullDto(event, confirmedRequests, views);
     }
@@ -119,9 +119,9 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    public List<EventShortDto> findAll(Long userId, PrivateEventSearchRequest privateEventSearchRequest) {
+    public List<EventShortDto> findAllByInitiator(Long userId, EventPaginationParams eventPaginationParams) {
         userQuery.checkUserExists(userId);
-        Pageable pageable = toPageable(privateEventSearchRequest);
+        Pageable pageable = toPageable(eventPaginationParams);
 
         List<Event> events = eventRepository.findEventsByInitiatorIdWithFetch(userId, pageable);
         if (events.isEmpty()) {
@@ -133,7 +133,7 @@ public class EventServiceImpl implements EventService {
                 .toList();
         Map<Long, Long> confirmedRequestsMap = requestQuery.countRequestsByEventIdsAndStatus(eventsIds,
                 RequestStatus.CONFIRMED);
-        Map<Long, Long> viewsMap = eventStatsAdapter.getViews(events);
+        Map<Long, Long> viewsMap = eventStatsAdapter.getViews(eventsIds);
 
         return EventMapper.toListEventShortDto(events, confirmedRequestsMap, viewsMap);
     }
@@ -146,17 +146,17 @@ public class EventServiceImpl implements EventService {
         checkInitiator(event.getInitiator().getId(), resourceReference.userId());
 
         long confirmedRequests = requestQuery.countRequestsByEventIdAndStatus(event.getId(), RequestStatus.CONFIRMED);
-        long views = eventStatsAdapter.getViews(event);
+        long views = eventStatsAdapter.getViews(event.getId());
 
         return EventMapper.toEventFullDto(event, confirmedRequests, views);
     }
 
     @Override
-    public List<EventFullDto> findAllByAdmin(AdminEventSearchRequest searchRequest) {
-        validateAdminSearchRequest(searchRequest);
+    public List<EventFullDto> findAllByAdmin(AdminEventSearchFilter searchFilter, EventPaginationParams eventPaginationParams) {
+        validateSearchRequestDateRange(searchFilter.rangeStart(), searchFilter.rangeEnd());
 
-        List<Event> events = eventRepository.findAllWithFetch(EventSpecifications.forAdminSearch(searchRequest),
-                toPageable(searchRequest.from(), searchRequest.size()));
+        List<Event> events = eventRepository.findAllWithFetch(EventSpecifications.forAdminSearch(searchFilter),
+                toPageable(eventPaginationParams));
         if (events.isEmpty()) {
             return List.of();
         }
@@ -166,7 +166,7 @@ public class EventServiceImpl implements EventService {
                 .toList();
         Map<Long, Long> confirmedRequestsMap = requestQuery.countRequestsByEventIdsAndStatus(eventsIds,
                 RequestStatus.CONFIRMED);
-        Map<Long, Long> viewsMap = eventStatsAdapter.getViews(events);
+        Map<Long, Long> viewsMap = eventStatsAdapter.getViews(eventsIds);
 
         return events.stream()
                 .map(event -> EventMapper.toEventFullDto(
@@ -188,7 +188,56 @@ public class EventServiceImpl implements EventService {
         applyAdminStateAction(event, eventDto.getStateAction());
 
         long confirmedRequests = requestQuery.countRequestsByEventIdAndStatus(event.getId(), RequestStatus.CONFIRMED);
-        long views = eventStatsAdapter.getViews(event);
+        long views = eventStatsAdapter.getViews(event.getId());
+
+        return EventMapper.toEventFullDto(event, confirmedRequests, views);
+    }
+
+    @Override
+    public List<EventShortDto> findAllPublic(PublicEventSearchFilter searchFilter, EventPaginationParams eventPaginationParams,
+                                             EventStatsHitParams hitParams) {
+        validateSearchRequestDateRange(searchFilter.rangeStart(), searchFilter.rangeEnd());
+
+        Pageable pageable = toPageable(eventPaginationParams);
+        Specification<Event> specification = EventSpecifications.forPublicSearch(searchFilter);
+        List<Event> events = eventRepository.findAllWithFetch(specification, pageable);
+        if (events.isEmpty()) {
+            eventStatsAdapter.createHit(hitParams.uri(), hitParams.ip());
+            return List.of();
+        }
+
+        List<Long> eventsIds = events.stream()
+                .map(Event::getId)
+                .toList();
+        Map<Long, Long> confirmedMap = requestQuery.countRequestsByEventIdsAndStatus(
+                eventsIds, RequestStatus.CONFIRMED
+        );
+        Map<Long, Long> viewsMap = eventStatsAdapter.getViews(eventsIds);
+
+        if (eventPaginationParams.sort() == EventSearchSort.VIEWS) {
+            events = events.stream()
+                    .sorted(Comparator.comparingLong(
+                            (Event e) -> viewsMap.getOrDefault(e.getId(), 0L)
+                    ).reversed())
+                    .skip(eventPaginationParams.from())
+                    .limit(eventPaginationParams.size())
+                    .toList();
+        }
+
+        eventStatsAdapter.createHit(hitParams.uri(), hitParams.ip());
+
+        return EventMapper.toListEventShortDto(events, confirmedMap, viewsMap);
+    }
+
+    @Override
+    public EventFullDto findByIdPublic(Long eventId, EventStatsHitParams hitParams) {
+        Event event = findFullEvent(eventId);
+        checkPublishedEvent(event);
+
+        eventStatsAdapter.createHit(hitParams.uri(), hitParams.ip());
+
+        long confirmedRequests = requestQuery.countRequestsByEventIdAndStatus(event.getId(), RequestStatus.CONFIRMED);
+        Long views = eventStatsAdapter.getViews(event.getId());
 
         return EventMapper.toEventFullDto(event, confirmedRequests, views);
     }
@@ -265,15 +314,8 @@ public class EventServiceImpl implements EventService {
         }
     }
 
-    private void validateAdminSearchRequest(AdminEventSearchRequest searchRequest) {
-        if (searchRequest.from() < 0) {
-            throw new BadRequestException("Параметр from не может быть отрицательным");
-        }
-        if (searchRequest.size() <= 0) {
-            throw new BadRequestException("Параметр size должен быть больше нуля");
-        }
-        if (searchRequest.rangeStart() != null && searchRequest.rangeEnd() != null
-                && searchRequest.rangeStart().isAfter(searchRequest.rangeEnd())) {
+    private void validateSearchRequestDateRange(LocalDateTime rangeStart, LocalDateTime rangeEnd) {
+        if (rangeStart != null && rangeEnd != null && rangeStart.isAfter(rangeEnd)) {
             throw new BadRequestException("Дата начала диапазона (rangeStart) не может быть позже даты конца (rangeEnd)");
         }
     }
@@ -309,11 +351,27 @@ public class EventServiceImpl implements EventService {
         }
     }
 
-    private Pageable toPageable(PrivateEventSearchRequest privateEventSearchRequest) {
-        return toPageable(privateEventSearchRequest.from(), privateEventSearchRequest.size());
+    private Pageable toPageable(EventPaginationParams eventPaginationParams) {
+        if (eventPaginationParams.sort() == null) {
+            return PageRequest.of(
+                    eventPaginationParams.from() / eventPaginationParams.size(),
+                    eventPaginationParams.size(),
+                    SORT_BY_ID_ASC);
+        }
+
+        return switch (eventPaginationParams.sort()) {
+            case EVENT_DATE -> PageRequest.of(
+                    eventPaginationParams.from() / eventPaginationParams.size(),
+                    eventPaginationParams.size(),
+                    Sort.by(Sort.Direction.DESC, Event_.EVENT_DATE));
+            // запрос на все строки по условиям с дальнейшей сортировкой и отсечением в памяти, т к VIEWS нет в БД
+            case VIEWS -> Pageable.unpaged(SORT_BY_ID_ASC);
+        };
     }
 
-    private Pageable toPageable(int from, int size) {
-        return PageRequest.of(from / size, size, SORT_BY_ID_ASC);
+    private void checkPublishedEvent(Event event) {
+        if (event.getPublishedOn() == null || event.getState() != EventState.PUBLISHED) {
+            throw new NotFoundException("Событие с id = " + event.getId() + " не найдено");
+        }
     }
 }
