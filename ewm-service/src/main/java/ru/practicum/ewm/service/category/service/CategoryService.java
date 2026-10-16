@@ -1,8 +1,9 @@
 package ru.practicum.ewm.service.category.service;
 
 import ru.practicum.ewm.service.category.dto.request.CategoryCreateDto;
+import ru.practicum.ewm.service.category.dto.request.CategoryUpdateDto;
 import ru.practicum.ewm.service.category.dto.response.CategoryResponseDto;
-import ru.practicum.ewm.service.category.utility.PublicCategorySearchRequest;
+import ru.practicum.ewm.service.category.utility.CategoryPaginationParams;
 
 import java.util.List;
 
@@ -16,24 +17,24 @@ public interface CategoryService {
      * @param id идентификатор категории
      * @return объект категории
      */
-    CategoryResponseDto get(Long id);
+    CategoryResponseDto getById(Long id);
 
     /**
      * Метод добавления новой категории
      *
-     * @param categoryCreateDto данные новой категории
+     * @param createDto данные новой категории
      * @return объект новой категории
      */
-    CategoryResponseDto create(CategoryCreateDto categoryCreateDto);
+    CategoryResponseDto create(CategoryCreateDto createDto);
 
     /**
      * Метод обновления данных о категории
      *
-     * @param categoryCreateDto данные новой категории
+     * @param updateDto данные новой категории
      * @param id                идентификатор категории
      * @return объект обновленной категории
      */
-    CategoryResponseDto update(CategoryCreateDto categoryCreateDto, Long id);
+    CategoryResponseDto update(Long id, CategoryUpdateDto updateDto);
 
     /**
      * Метод удаления категории
@@ -47,5 +48,5 @@ public interface CategoryService {
      *
      * @return список всех категорий
      */
-    List<CategoryResponseDto> getAll(PublicCategorySearchRequest publicCategorySearchRequest);
+    List<CategoryResponseDto> getAll(CategoryPaginationParams paginationParams);
 }

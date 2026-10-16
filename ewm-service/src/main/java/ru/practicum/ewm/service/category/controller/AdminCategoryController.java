@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.ewm.service.category.dto.request.CategoryCreateDto;
+import ru.practicum.ewm.service.category.dto.request.CategoryUpdateDto;
 import ru.practicum.ewm.service.category.dto.response.CategoryResponseDto;
 import ru.practicum.ewm.service.category.service.CategoryService;
 
@@ -18,20 +19,24 @@ public class AdminCategoryController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public CategoryResponseDto create(@RequestBody CategoryCreateDto newCategory) {
-        return categoryService.create(newCategory);
+    public CategoryResponseDto create(@Valid @RequestBody CategoryCreateDto createDto) {
+        log.info("Получен запрос на создание категории category = {}", createDto);
+
+        return categoryService.create(createDto);
     }
 
-    @PatchMapping("/{id}")
-    public CategoryResponseDto update(@Valid @PathVariable Long id,
-                                      @RequestBody CategoryCreateDto category) {
-        return categoryService.update(category, id);
+    @PatchMapping("/{catId}")
+    public CategoryResponseDto update(@PathVariable Long catId,
+                                      @Valid @RequestBody CategoryUpdateDto updateDto) {
+        log.info("Получен запрос на обновление категории с id = {}", catId);
+
+        return categoryService.update(catId, updateDto);
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{catId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@Valid @PathVariable Long id) {
-        categoryService.delete(id);
+    public void delete(@PathVariable Long catId) {
+        categoryService.delete(catId);
     }
 
 }

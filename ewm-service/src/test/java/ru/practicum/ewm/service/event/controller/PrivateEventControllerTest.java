@@ -467,7 +467,7 @@ public class PrivateEventControllerTest {
         return EventFullDto.builder()
                 .id(EVENT_ID)
                 .annotation(ANNOTATION)
-                .category(createCategoryDto())
+                .category(createCategoryResponseDto())
                 .confirmedRequests(0L)
                 .createdOn(LocalDateTime.now())
                 .description(DESCRIPTION)
@@ -482,7 +482,7 @@ public class PrivateEventControllerTest {
                 .build();
     }
 
-    private CategoryResponseDto createCategoryDto() {
+    private CategoryResponseDto createCategoryResponseDto() {
         return CategoryResponseDto.builder()
                 .id(CATEGORY_ID)
                 .name("Category")

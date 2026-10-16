@@ -6,7 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.ewm.service.category.dto.response.CategoryResponseDto;
 import ru.practicum.ewm.service.category.service.CategoryService;
-import ru.practicum.ewm.service.category.utility.PublicCategorySearchRequest;
+import ru.practicum.ewm.service.category.utility.CategoryPaginationParams;
 
 import java.util.List;
 
@@ -17,16 +17,19 @@ import java.util.List;
 public class PublicCategoryController {
     private final CategoryService categoryService;
 
-    @GetMapping("/{id}")
-    public CategoryResponseDto get(@Valid @PathVariable Long id) {
-        return categoryService.get(id);
+    @GetMapping("/{catId}")
+    public CategoryResponseDto getById(@PathVariable Long catId) {
+        log.info("Получен запрос на поиск категории с id = {}", catId);
+
+        return categoryService.getById(catId);
     }
 
     @GetMapping
-    public List<CategoryResponseDto> getAll(@RequestParam(required = false, defaultValue = "0") Integer from,
-                                            @RequestParam(required = false, defaultValue = "10") Integer size) {
-        PublicCategorySearchRequest publicCategorySearchRequest = new PublicCategorySearchRequest(from, size);
-        return categoryService.getAll(publicCategorySearchRequest);
+    public List<CategoryResponseDto> getAll(@Valid @ModelAttribute CategoryPaginationParams params) {
+        log.info("Получен запрос на поиск всех категорий с параметрами запроса from = {}, size = {}",
+                params.from(), params.size());
+
+        return categoryService.getAll(params);
     }
 
 }
