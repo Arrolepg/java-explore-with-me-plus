@@ -19,7 +19,7 @@ import ru.practicum.ewm.service.event.model.Event;
 import ru.practicum.ewm.service.event.model.EventLocation;
 import ru.practicum.ewm.service.event.model.EventState;
 import ru.practicum.ewm.service.event.repository.EventRepository;
-import ru.practicum.ewm.service.event.utility.PrivateEventSearchRequest;
+import ru.practicum.ewm.service.event.utility.EventPaginationParams;
 import ru.practicum.ewm.service.adapter.EventStatsAdapter;
 import ru.practicum.ewm.service.event.utility.ResourceReference;
 import ru.practicum.ewm.service.exception.ConflictException;
@@ -100,7 +100,7 @@ public class EventServiceImplIntegrationTest {
     void testUpdate() {
         User owner = createUser(OWNER_NAME, OWNER_EMAIL);
         Event event = createEvent(owner, EventState.PENDING);
-        when(eventStatsAdapter.getViews(any(Event.class))).thenReturn(0L);
+        when(eventStatsAdapter.getViews(any(Long.class))).thenReturn(0L);
 
         UpdateEventUserRequest dto = new UpdateEventUserRequest();
         dto.setTitle("Updated title");
@@ -255,8 +255,8 @@ public class EventServiceImplIntegrationTest {
         createEvent(owner, EventState.PENDING);
         when(eventStatsAdapter.getViews(anyList())).thenReturn(Map.of());
 
-        List<EventShortDto> result = eventService.findAll(owner.getId(),
-                new PrivateEventSearchRequest(0, 10));
+        List<EventShortDto> result = eventService.findAllByInitiator(owner.getId(),
+                new EventPaginationParams(0, 10, null));
 
         assertThat(result).hasSize(2);
     }
@@ -265,16 +265,16 @@ public class EventServiceImplIntegrationTest {
     void testFindAllEmpty() {
         User owner = createUser(OWNER_NAME, OWNER_EMAIL);
 
-        List<EventShortDto> result = eventService.findAll(owner.getId(),
-                new PrivateEventSearchRequest(0, 10));
+        List<EventShortDto> result = eventService.findAllByInitiator(owner.getId(),
+                new EventPaginationParams(0, 10, null));
 
         assertThat(result).isEmpty();
     }
 
     @Test
     void testFindAllUserNotFound() {
-        assertThatThrownBy(() -> eventService.findAll(999L,
-                new PrivateEventSearchRequest(0, 10)))
+        assertThatThrownBy(() -> eventService.findAllByInitiator(999L,
+                new EventPaginationParams(0, 10, null)))
                 .isInstanceOf(NotFoundException.class);
     }
 
@@ -282,7 +282,7 @@ public class EventServiceImplIntegrationTest {
     void testFindById() {
         User owner = createUser(OWNER_NAME, OWNER_EMAIL);
         Event event = createEvent(owner, EventState.PENDING);
-        when(eventStatsAdapter.getViews(any(Event.class))).thenReturn(0L);
+        when(eventStatsAdapter.getViews(any(Long.class))).thenReturn(0L);
 
         EventFullDto result = eventService.findById(new ResourceReference(owner.getId(), event.getId()));
 

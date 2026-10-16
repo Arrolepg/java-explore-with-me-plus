@@ -17,7 +17,8 @@ import ru.practicum.ewm.service.event.model.Event;
 import ru.practicum.ewm.service.event.model.EventLocation;
 import ru.practicum.ewm.service.event.model.EventState;
 import ru.practicum.ewm.service.event.repository.EventRepository;
-import ru.practicum.ewm.service.event.utility.AdminEventSearchRequest;
+import ru.practicum.ewm.service.event.utility.AdminEventSearchFilter;
+import ru.practicum.ewm.service.event.utility.EventPaginationParams;
 import ru.practicum.ewm.service.user.model.User;
 import ru.practicum.ewm.service.user.repository.UserRepository;
 
@@ -63,7 +64,7 @@ public class EventServiceImplAdminIntegrationTest {
     @BeforeEach
     void setUp() {
         when(eventStatsAdapter.getViews(anyList())).thenReturn(Map.of());
-        when(eventStatsAdapter.getViews(any(Event.class))).thenReturn(0L);
+        when(eventStatsAdapter.getViews(any(Long.class))).thenReturn(0L);
 
         alice = createUser("Alice", "alice@mail.com");
         bob = createUser("Bob", "bob@mail.com");
@@ -77,7 +78,9 @@ public class EventServiceImplAdminIntegrationTest {
 
     @Test
     void testFindAllWithoutFilters() {
-        List<EventFullDto> result = eventService.findAllByAdmin(search(null, null, null, null, null));
+        List<EventFullDto> result = eventService.findAllByAdmin(
+                filter(null, null, null, null, null),
+                params());
 
         assertThat(result).extracting(EventFullDto::getId)
                 .containsExactly(alicePendingConcert.getId(), alicePublishedTheatre.getId(),
@@ -86,7 +89,9 @@ public class EventServiceImplAdminIntegrationTest {
 
     @Test
     void testFindAllByUsers() {
-        List<EventFullDto> result = eventService.findAllByAdmin(search(List.of(bob.getId()), null, null, null, null));
+        List<EventFullDto> result = eventService.findAllByAdmin(
+                filter(List.of(bob.getId()), null, null, null, null),
+                params());
 
         assertThat(result).extracting(EventFullDto::getId).containsExactly(bobCanceledConcert.getId());
     }
@@ -94,7 +99,8 @@ public class EventServiceImplAdminIntegrationTest {
     @Test
     void testFindAllByStates() {
         List<EventFullDto> result = eventService.findAllByAdmin(
-                search(null, List.of(EventState.PENDING, EventState.CANCELED), null, null, null));
+                filter(null, List.of(EventState.PENDING, EventState.CANCELED), null, null, null),
+                params());
 
         assertThat(result).extracting(EventFullDto::getId)
                 .containsExactly(alicePendingConcert.getId(), bobCanceledConcert.getId());
@@ -103,7 +109,8 @@ public class EventServiceImplAdminIntegrationTest {
     @Test
     void testFindAllByCategories() {
         List<EventFullDto> result = eventService.findAllByAdmin(
-                search(null, null, List.of(theatre.getId()), null, null));
+                filter(null, null, List.of(theatre.getId()), null, null),
+                params());
 
         assertThat(result).extracting(EventFullDto::getId).containsExactly(alicePublishedTheatre.getId());
     }
@@ -111,7 +118,8 @@ public class EventServiceImplAdminIntegrationTest {
     @Test
     void testFindAllByDateRange() {
         List<EventFullDto> result = eventService.findAllByAdmin(
-                search(null, null, null, BASE_DATE.plusDays(5), BASE_DATE.plusDays(15)));
+                filter(null, null, null, BASE_DATE.plusDays(5), BASE_DATE.plusDays(15)),
+                params());
 
         assertThat(result).extracting(EventFullDto::getId).containsExactly(alicePublishedTheatre.getId());
     }
@@ -119,8 +127,9 @@ public class EventServiceImplAdminIntegrationTest {
     @Test
     void testFindAllWithCombinedFilters() {
         List<EventFullDto> result = eventService.findAllByAdmin(
-                search(List.of(alice.getId()), List.of(EventState.PENDING), List.of(concerts.getId()),
-                        BASE_DATE.minusDays(1), BASE_DATE.plusDays(1)));
+                filter(List.of(alice.getId()), List.of(EventState.PENDING), List.of(concerts.getId()),
+                        BASE_DATE.minusDays(1), BASE_DATE.plusDays(1)),
+                params());
 
         assertThat(result).extracting(EventFullDto::getId).containsExactly(alicePendingConcert.getId());
     }
@@ -128,7 +137,8 @@ public class EventServiceImplAdminIntegrationTest {
     @Test
     void testFindAllWithPagination() {
         List<EventFullDto> result = eventService.findAllByAdmin(
-                new AdminEventSearchRequest(null, null, null, null, null, 2, 2));
+                new AdminEventSearchFilter(null, null, null, null, null),
+                new EventPaginationParams(2, 2, null));
 
         assertThat(result).extracting(EventFullDto::getId).containsExactly(bobCanceledConcert.getId());
     }
@@ -136,7 +146,7 @@ public class EventServiceImplAdminIntegrationTest {
     @Test
     void testFindAllReturnsCategoryAndInitiator() {
         List<EventFullDto> result = eventService.findAllByAdmin(
-                search(List.of(bob.getId()), null, null, null, null));
+                filter(List.of(bob.getId()), null, null, null, null), params());
 
         assertAll(
                 () -> assertThat(result.getFirst().getCategory().getName()).isEqualTo("Concerts"),
@@ -161,9 +171,13 @@ public class EventServiceImplAdminIntegrationTest {
         );
     }
 
-    private AdminEventSearchRequest search(List<Long> users, List<EventState> states, List<Long> categories,
-                                           LocalDateTime rangeStart, LocalDateTime rangeEnd) {
-        return new AdminEventSearchRequest(users, states, categories, rangeStart, rangeEnd, 0, 10);
+    private AdminEventSearchFilter filter(List<Long> users, List<EventState> states, List<Long> categories,
+                                          LocalDateTime rangeStart, LocalDateTime rangeEnd) {
+        return new AdminEventSearchFilter(users, states, categories, rangeStart, rangeEnd);
+    }
+
+    private EventPaginationParams params() {
+        return new EventPaginationParams(0, 10, null);
     }
 
     private User createUser(String name, String email) {

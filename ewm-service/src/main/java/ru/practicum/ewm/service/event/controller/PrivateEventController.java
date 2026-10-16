@@ -12,7 +12,7 @@ import ru.practicum.ewm.service.event.dto.response.EventFullDto;
 import ru.practicum.ewm.service.event.dto.response.EventRequestStatusUpdateResult;
 import ru.practicum.ewm.service.event.dto.response.EventShortDto;
 import ru.practicum.ewm.service.event.service.EventService;
-import ru.practicum.ewm.service.event.utility.PrivateEventSearchRequest;
+import ru.practicum.ewm.service.event.utility.EventPaginationParams;
 import ru.practicum.ewm.service.event.utility.ResourceReference;
 import ru.practicum.ewm.service.request.dto.ParticipationRequestDto;
 
@@ -27,13 +27,10 @@ public class PrivateEventController {
 
     @GetMapping
     public List<EventShortDto> findAll(@PathVariable Long userId,
-                                       @RequestParam(required = false, defaultValue = "0") Integer from,
-                                       @RequestParam(required = false, defaultValue = "10") Integer size) {
+                                       @Valid @ModelAttribute EventPaginationParams eventPaginationParams) {
         log.info("Получен запрос от пользователя с id = {} на поиск всех своих созданных событий", userId);
 
-        PrivateEventSearchRequest privateEventSearchRequest = new PrivateEventSearchRequest(from, size);
-
-        return eventService.findAll(userId, privateEventSearchRequest);
+        return eventService.findAllByInitiator(userId, eventPaginationParams);
     }
 
     @GetMapping("/{eventId}")
