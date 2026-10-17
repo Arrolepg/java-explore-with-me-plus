@@ -2,6 +2,7 @@ package ru.practicum.ewm.service.request.service;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -10,6 +11,7 @@ import ru.practicum.ewm.service.event.model.EventState;
 import ru.practicum.ewm.service.event.query.EventQuery;
 import ru.practicum.ewm.service.exception.ConflictException;
 import ru.practicum.ewm.service.exception.NotFoundException;
+import ru.practicum.ewm.service.request.dto.ParticipationRequestDto;
 import ru.practicum.ewm.service.request.model.Request;
 import ru.practicum.ewm.service.request.model.RequestStatus;
 import ru.practicum.ewm.service.request.repository.RequestRepository;
@@ -178,6 +180,75 @@ public class RequestServiceImplUnitTest {
         assertThat(requestService.create(1L, 2L).getStatus())
                 .isEqualTo(RequestStatus.CONFIRMED);
 
+    }
+
+    @Test
+    void createRequestIsConfirmedWhenParticipantLimitIsZero() {
+        User user = getUser(1L);
+        User user2 = getUser(2L);
+
+        Event event = getEvent(user2, EventState.PUBLISHED);
+        event.setParticipantLimit(0);
+        event.setRequestModeration(true);
+
+        when(userQuery.findUser(1L))
+                .thenReturn(user);
+        when(eventQuery.findEvent(2L))
+                .thenReturn(event);
+        when(requestRepository.countRequestsByEventIdAndStatus(2L, RequestStatus.CONFIRMED))
+                .thenReturn(5L);
+
+        assertThat(requestService.create(1L, 2L).getStatus())
+                .isEqualTo(RequestStatus.CONFIRMED);
+    }
+
+    @Test
+    void createRequestIsPendingWhenModerationIsRequired() {
+        User user = getUser(1L);
+        User user2 = getUser(2L);
+
+        Event event = getEvent(user2, EventState.PUBLISHED);
+        event.setRequestModeration(true);
+
+        when(userQuery.findUser(1L))
+                .thenReturn(user);
+        when(eventQuery.findEvent(2L))
+                .thenReturn(event);
+        when(requestRepository.countRequestsByEventIdAndStatus(2L, RequestStatus.CONFIRMED))
+                .thenReturn(1L);
+
+        assertThat(requestService.create(1L, 2L).getStatus())
+                .isEqualTo(RequestStatus.PENDING);
+    }
+
+    @Test
+    void createRequestSavesCreatedTruncatedToMicros() {
+        User user = getUser(1L);
+        User user2 = getUser(2L);
+
+        Event event = getEvent(user2, EventState.PUBLISHED);
+        event.setRequestModeration(true);
+
+        when(userQuery.findUser(1L))
+                .thenReturn(user);
+        when(eventQuery.findEvent(2L))
+                .thenReturn(event);
+        when(requestRepository.countRequestsByEventIdAndStatus(2L, RequestStatus.CONFIRMED))
+                .thenReturn(0L);
+
+        ParticipationRequestDto result = requestService.create(1L, 2L);
+
+        ArgumentCaptor<Request> captor = ArgumentCaptor.forClass(Request.class);
+        verify(requestRepository).save(captor.capture());
+        assertThat(result.getCreated())
+                .isNotNull()
+                .isEqualTo(captor.getValue().getCreated());
+        assertThat(result.getCreated().getNano() % 1000)
+                .isZero();
+        assertThat(result.getEventId())
+                .isEqualTo(2L);
+        assertThat(result.getRequesterId())
+                .isEqualTo(1L);
     }
 
     private User getUser(Long id) {

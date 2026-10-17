@@ -104,6 +104,17 @@ public class EventRepositoryTest {
         assertThat(page1.getFirst().getId()).isNotEqualTo(page2.getFirst().getId());
     }
 
+    @Test
+    void testExistsEventByCategoryId() {
+        User owner = createUser("Owner", "owner@mail.com");
+        Category withEvents = createCategory("With events");
+        Category withoutEvents = createCategory("Without events");
+        createEvent(owner, withEvents, "Event");
+
+        assertThat(eventRepository.existsEventByCategoryId(withEvents.getId())).isTrue();
+        assertThat(eventRepository.existsEventByCategoryId(withoutEvents.getId())).isFalse();
+    }
+
     private User createUser(String name, String email) {
         User user = new User();
         user.setName(name);

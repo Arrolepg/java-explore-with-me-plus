@@ -18,6 +18,7 @@ import ru.practicum.ewm.service.user.model.User;
 import ru.practicum.ewm.service.user.query.UserQuery;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Slf4j
@@ -53,15 +54,15 @@ public class RequestServiceImpl implements RequestService {
            throw new ConflictException("Достигнут лимит запросов на участие");
         }
 
-        LocalDateTime timeCreate = LocalDateTime.now();
+        LocalDateTime timeCreate = LocalDateTime.now().truncatedTo(ChronoUnit.MICROS);
         Request request = new Request();
         request.setEvent(event);
         request.setCreated(timeCreate);
         request.setRequester(user);
-        if (event.getRequestModeration()) {
-            request.setStatus(RequestStatus.PENDING);
-        } else {
+        if (limit == 0 || !event.getRequestModeration()) {
             request.setStatus(RequestStatus.CONFIRMED);
+        } else {
+            request.setStatus(RequestStatus.PENDING);
         }
 
         requestRepository.save(request);
