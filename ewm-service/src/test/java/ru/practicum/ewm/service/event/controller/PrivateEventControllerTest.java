@@ -7,7 +7,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import ru.practicum.ewm.service.category.dto.CategoryDto;
+import ru.practicum.ewm.service.category.dto.response.CategoryResponseDto;
 import ru.practicum.ewm.service.event.dto.request.EventLocationCreateDto;
 import ru.practicum.ewm.service.event.dto.request.EventRequestStatusUpdateRequest;
 import ru.practicum.ewm.service.event.dto.request.NewEventDto;
@@ -467,7 +467,7 @@ public class PrivateEventControllerTest {
         return EventFullDto.builder()
                 .id(EVENT_ID)
                 .annotation(ANNOTATION)
-                .category(createCategoryDto())
+                .category(createCategoryResponseDto())
                 .confirmedRequests(0L)
                 .createdOn(LocalDateTime.now())
                 .description(DESCRIPTION)
@@ -482,8 +482,8 @@ public class PrivateEventControllerTest {
                 .build();
     }
 
-    private CategoryDto createCategoryDto() {
-        return CategoryDto.builder()
+    private CategoryResponseDto createCategoryResponseDto() {
+        return CategoryResponseDto.builder()
                 .id(CATEGORY_ID)
                 .name("Category")
                 .build();

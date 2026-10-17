@@ -4,4 +4,6 @@ import ru.practicum.ewm.service.event.model.Event;
 
 public interface EventQuery {
     Event findEvent(Long eventId);
+
+    boolean existsByCategoryId(Long categoryId);
 }

@@ -18,4 +18,9 @@ public class EventQueryImpl implements EventQuery {
                         () -> new NotFoundException("Событие с id = " + eventId + " не найдено")
                 );
     }
+
+    @Override
+    public boolean existsByCategoryId(Long categoryId) {
+        return eventRepository.existsEventByCategoryId(categoryId);
+    }
 }

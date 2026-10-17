@@ -5,5 +5,8 @@ import org.springframework.stereotype.Repository;
 import ru.practicum.ewm.service.category.model.Category;
 
 @Repository
-public interface CategoryRepository extends JpaRepository<Category, Long> {
+public interface CategoryRepository extends JpaRepository<Category, Long>, CategorySearchRepository {
+    boolean existsCategoryByName(String name);
+
+    boolean existsCategoryByNameAndIdNot(String name, Long id);
 }
