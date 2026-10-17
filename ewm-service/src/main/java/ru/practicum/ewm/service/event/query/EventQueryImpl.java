@@ -6,6 +6,8 @@ import ru.practicum.ewm.service.event.model.Event;
 import ru.practicum.ewm.service.event.repository.EventRepository;
 import ru.practicum.ewm.service.exception.NotFoundException;
 
+import java.util.List;
+
 @Component
 @RequiredArgsConstructor
 public class EventQueryImpl implements EventQuery {
@@ -22,5 +24,10 @@ public class EventQueryImpl implements EventQuery {
     @Override
     public boolean existsByCategoryId(Long categoryId) {
         return eventRepository.existsEventByCategoryId(categoryId);
+    }
+
+    @Override
+    public List<Event> findAllById(List<Long> eventsIds) {
+        return eventRepository.findAllById(eventsIds);
     }
 }
