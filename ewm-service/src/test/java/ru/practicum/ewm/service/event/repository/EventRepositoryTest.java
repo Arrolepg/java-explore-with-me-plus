@@ -1,5 +1,6 @@
 package ru.practicum.ewm.service.event.repository;
 
+import org.hibernate.Hibernate;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
@@ -113,6 +114,34 @@ public class EventRepositoryTest {
 
         assertThat(eventRepository.existsEventByCategoryId(withEvents.getId())).isTrue();
         assertThat(eventRepository.existsEventByCategoryId(withoutEvents.getId())).isFalse();
+    }
+
+    @Test
+    void findAllByIdWithFetchLoadsCategoryAndInitiator() {
+        User owner1 = createUser("Igor", "igor@mail.com");
+        User owner2 = createUser("Ivan", "ivan@mail.com");
+        Category category1 = createCategory("Music");
+        Category category2 = createCategory("Theatre");
+
+        Event event1 = createEvent(owner1, category1, "Concert");
+        Event event2 = createEvent(owner2, category2, "Play");
+        createEvent(owner1, category1, "Other event");
+
+        List<Long> ids = List.of(event1.getId(), event2.getId());
+
+        entityManager.flush();
+        entityManager.clear();
+
+        List<Event> result = eventRepository.findAllByIdWithFetch(ids);
+
+        assertThat(result)
+                .extracting(Event::getId)
+                .containsExactlyInAnyOrderElementsOf(ids);
+
+        for (Event event : result) {
+            assertThat(Hibernate.isInitialized(event.getCategory())).isTrue();
+            assertThat(Hibernate.isInitialized(event.getInitiator())).isTrue();
+        }
     }
 
     private User createUser(String name, String email) {

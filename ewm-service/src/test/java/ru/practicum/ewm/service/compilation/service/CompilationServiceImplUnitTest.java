@@ -5,7 +5,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import ru.practicum.ewm.service.adapter.EventStatsAdapter;
 import ru.practicum.ewm.service.category.model.Category;
 import ru.practicum.ewm.service.compilation.dto.CompilationDto;
 import ru.practicum.ewm.service.compilation.dto.NewCompilationDto;
@@ -44,9 +43,6 @@ public class CompilationServiceImplUnitTest {
     private RequestQuery requestQuery;
 
     @Mock
-    private EventStatsAdapter eventStatsAdapter;
-
-    @Mock
     private EventQuery eventQuery;
 
     @Test
@@ -59,7 +55,7 @@ public class CompilationServiceImplUnitTest {
         assertThat(compService.findAll(null, params))
                 .isEmpty();
 
-        verifyNoInteractions(requestQuery, eventStatsAdapter);
+        verifyNoInteractions(requestQuery);
     }
 
     @Test
@@ -80,7 +76,7 @@ public class CompilationServiceImplUnitTest {
         assertThat(compilationsDto.getFirst().getEvents())
                 .isEmpty();
 
-        verifyNoInteractions(requestQuery, eventStatsAdapter);
+        verifyNoInteractions(requestQuery);
     }
 
     @Test
@@ -98,6 +94,13 @@ public class CompilationServiceImplUnitTest {
 
         when(compRepository.findAllWithEventsByIdIn(List.of(1L, 2L)))
                 .thenReturn(List.of(compilation1, compilation2));
+
+        when(eventQuery.getEventsDto(List.of(event2, event3, event1)))
+                .thenReturn(List.of(
+                        EventShortDto.builder().id(1L).build(),
+                        EventShortDto.builder().id(2L).build(),
+                        EventShortDto.builder().id(3L).build()
+                ));
 
         List<CompilationDto> compilationsDto = compService.findAll(null, params);
         assertThat(compilationsDto).hasSize(2);
@@ -125,7 +128,7 @@ public class CompilationServiceImplUnitTest {
 
     @Test
     void findByIdThrowsNotFound() {
-        when(compRepository.findById(3L))
+        when(compRepository.findByIdWithEvents(3L))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> compService.findById(3L))
@@ -140,8 +143,9 @@ public class CompilationServiceImplUnitTest {
         UpdateCompilationRequest dto = new UpdateCompilationRequest();
         dto.setPinned(true);
 
-        when(compRepository.findById(1L))
+        when(compRepository.findByIdWithEvents(1L))
                 .thenReturn(Optional.of(compilation1));
+
 
         CompilationDto compDto = compService.update(1L, dto);
 
@@ -173,7 +177,7 @@ public class CompilationServiceImplUnitTest {
         assertThat(result.getEvents()).isEmpty();
 
         verify(compRepository).save(any(Compilation.class));
-        verifyNoInteractions(eventQuery, requestQuery, eventStatsAdapter);
+        verifyNoInteractions(eventQuery, requestQuery);
     }
 
     @Test
@@ -186,14 +190,14 @@ public class CompilationServiceImplUnitTest {
                 .id(1L)
                 .build();
 
-        when(eventQuery.findAllById(List.of(1L, 2L)))
+        when(eventQuery.findAllByIdWithFetch(List.of(1L, 2L)))
                 .thenReturn(List.of(event));
 
         assertThatThrownBy(() -> compService.create(dto))
                 .isInstanceOf(NotFoundException.class);
 
         verify(compRepository, never()).save(any(Compilation.class));
-        verifyNoInteractions(requestQuery, eventStatsAdapter);
+        verifyNoInteractions(requestQuery);
     }
 
     private Event getEvent(Long id) {

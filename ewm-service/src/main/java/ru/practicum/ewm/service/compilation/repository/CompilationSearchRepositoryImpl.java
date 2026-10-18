@@ -22,6 +22,6 @@ public class CompilationSearchRepositoryImpl implements CompilationSearchReposit
         if (pinned != null) {
             query.setParameter("pinned", pinned);
         }
-        return query.setFirstResult(params.getFrom()).setMaxResults(params.getSize()).getResultList();
+        return query.setFirstResult(params.from()).setMaxResults(params.size()).getResultList();
     }
 }

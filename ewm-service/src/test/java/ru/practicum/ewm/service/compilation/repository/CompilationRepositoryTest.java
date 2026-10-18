@@ -118,6 +118,65 @@ public class CompilationRepositoryTest {
         }
     }
 
+    @Test
+    void findByIdWithEventsLoadsEventsWithCategoryAndInitiator() {
+        User owner = createUser();
+        Category category = createCategory();
+        Event event1 = createEvent(owner, category);
+        Event event2 = createEvent(owner, category);
+
+        Compilation compilation =
+                createComp(List.of(event1, event2), false, "Concerts");
+
+        Long compId = compilation.getId();
+        List<Long> eventIds = List.of(event1.getId(), event2.getId());
+
+        entityManager.flush();
+        entityManager.clear();
+
+        var result = compilationRepository.findByIdWithEvents(compId);
+
+        assertThat(result).isPresent();
+
+        Compilation loaded = result.orElseThrow();
+
+        assertThat(loaded.getId()).isEqualTo(compId);
+        assertThat(Hibernate.isInitialized(loaded.getEvents())).isTrue();
+
+        assertThat(loaded.getEvents())
+                .extracting(Event::getId)
+                .containsExactlyInAnyOrderElementsOf(eventIds);
+
+        for (Event event : loaded.getEvents()) {
+            assertThat(Hibernate.isInitialized(event.getCategory())).isTrue();
+            assertThat(Hibernate.isInitialized(event.getInitiator())).isTrue();
+        }
+    }
+
+    @Test
+    void findByIdWithEventsReturnsCompilationWithoutEvents() {
+        Compilation compilation = createComp(List.of(), false, "Concerts");
+        Long compId = compilation.getId();
+
+        entityManager.flush();
+        entityManager.clear();
+
+        var result = compilationRepository.findByIdWithEvents(compId);
+
+        assertThat(result).isPresent();
+
+        Compilation loaded = result.orElseThrow();
+
+        assertThat(loaded.getId()).isEqualTo(compId);
+        assertThat(Hibernate.isInitialized(loaded.getEvents())).isTrue();
+        assertThat(loaded.getEvents()).isEmpty();
+    }
+
+    @Test
+    void findByIdWithEventsReturnsEmptyWhenCompilationDoesNotExist() {
+        assertThat(compilationRepository.findByIdWithEvents(-1L)).isEmpty();
+    }
+
     private User createUser() {
         User user = new User();
         user.setName("Owner");
