@@ -1,5 +1,6 @@
 package ru.practicum.stats.client;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestClient;
@@ -17,8 +18,8 @@ public class StatsClientConfig {
     }
 
     @Bean
-    public StatsClient statsClient(RestClient statsRestClient) {
-        return new StatsClient(statsRestClient);
+    public StatsClient statsClient(RestClient statsRestClient, ObjectMapper objectMapper) {
+        return new StatsClient(statsRestClient, objectMapper);
     }
 
 }

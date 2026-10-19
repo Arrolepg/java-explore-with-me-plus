@@ -1,10 +1,13 @@
 package ru.practicum.stats.client;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.*;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
+import ru.practicum.stats.client.exception.StatsClientException;
 import ru.practicum.stats.dto.parameter.ParamDto;
 import ru.practicum.stats.dto.request.EndpointHitDto;
 import ru.practicum.stats.dto.response.ViewStatsDto;
@@ -12,6 +15,7 @@ import ru.practicum.stats.dto.response.ViewStatsDto;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
@@ -29,7 +33,8 @@ class StatsClientTest {
 
         mockServer = MockRestServiceServer.bindTo(builder).build();
         RestClient restClient = builder.build();
-        statsClient = new StatsClient(restClient);
+        ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+        statsClient = new StatsClient(restClient, objectMapper);
 
         paramDto = new ParamDto();
         paramDto.setStart(LocalDateTime.of(2026, 9, 20, 18, 30, 10));
@@ -102,4 +107,44 @@ class StatsClientTest {
         mockServer.verify();
     }
 
+    @Test
+    void createHitShouldThrowStatsClientExceptionOn4xx() {
+        String json = "{\"status\":\"BAD_REQUEST\",\"reason\":\"Incorrectly made request.\"," +
+                "\"message\":\"Field: app. Error: must not be blank.\"}";
+
+        mockServer.expect(requestTo("http://localhost:9090/hit"))
+                .andRespond(withBadRequest()
+                        .body(json)
+                        .contentType(MediaType.APPLICATION_JSON));
+
+        EndpointHitDto dto = new EndpointHitDto();
+        dto.setApp("ewm-main-service");
+        dto.setUri("/events/1");
+        dto.setIp("192.163.0.1");
+        dto.setTimestamp(LocalDateTime.of(2026, 9, 20, 18, 30, 10));
+
+        assertThatThrownBy(() -> statsClient.createHit(dto))
+                .isInstanceOf(StatsClientException.class)
+                .hasMessageContaining("Field: app");
+
+        mockServer.verify();
+    }
+
+    @Test
+    void createHitShouldThrowStatsClientExceptionOn5xx() {
+        mockServer.expect(requestTo("http://localhost:9090/hit"))
+                .andRespond(withServerError());
+
+        EndpointHitDto dto = new EndpointHitDto();
+        dto.setApp("ewm-main-service");
+        dto.setUri("/events/1");
+        dto.setIp("192.163.0.1");
+        dto.setTimestamp(LocalDateTime.of(2026, 9, 20, 18, 30, 10));
+
+        assertThatThrownBy(() -> statsClient.createHit(dto))
+                .isInstanceOf(StatsClientException.class)
+                .hasMessageContaining("Сервер статистики временно недоступен");
+
+        mockServer.verify();
+    }
 }
