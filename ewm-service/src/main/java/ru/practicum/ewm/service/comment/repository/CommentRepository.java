@@ -27,6 +27,4 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
             "join fetch c.author " +
             "where c.event.id in ?1 and c.state = ?2 ")
     List<Comment> findCommentsByEventIdsAndStateWithAuthorFetch(List<Long> eventIds, CommentState commentState);
-
-    List<Long> id(Long id);
 }
