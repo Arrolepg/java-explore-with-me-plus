@@ -3,6 +3,7 @@ package ru.practicum.ewm.service.event.utility;
 import lombok.experimental.UtilityClass;
 import ru.practicum.ewm.service.category.model.Category;
 import ru.practicum.ewm.service.category.utility.CategoryMapper;
+import ru.practicum.ewm.service.comment.dto.response.CommentEventResponseDto;
 import ru.practicum.ewm.service.event.dto.request.EventLocationCreateDto;
 import ru.practicum.ewm.service.event.dto.request.NewEventDto;
 import ru.practicum.ewm.service.event.dto.response.EventFullDto;
@@ -54,7 +55,8 @@ public class EventMapper {
                 .build();
     }
 
-    public EventFullDto toEventFullDto(Event event, Long confirmedRequests, Long views) {
+    public EventFullDto toEventFullDto(Event event, Long confirmedRequests, Long views,
+                                       List<CommentEventResponseDto> comments) {
         return EventFullDto.builder()
                 .id(event.getId())
                 .annotation(event.getAnnotation())
@@ -72,7 +74,21 @@ public class EventMapper {
                 .state(event.getState())
                 .title(event.getTitle())
                 .views(views)
+                .comments(comments)
                 .build();
+    }
+
+    public List<EventFullDto> toListEventFullDto(List<Event> events, Map<Long, Long> confirmedRequestsMap,
+                                                 Map<Long, Long> viewsMap,
+                                                 Map<Long, List<CommentEventResponseDto>> commentsMap) {
+        return events.stream()
+                .map(event -> EventMapper.toEventFullDto(
+                        event,
+                        confirmedRequestsMap.getOrDefault(event.getId(), 0L),
+                        viewsMap.getOrDefault(event.getId(), 0L),
+                        commentsMap.getOrDefault(event.getId(), List.of())
+                ))
+                .toList();
     }
 
     public EventRequestStatusUpdateResult toEventRequestStatusUpdateResult(
@@ -83,7 +99,7 @@ public class EventMapper {
                 .build();
     }
 
-    public EventShortDto toEventShortDto(Event event, Long confirmedRequests, Long views) {
+    public EventShortDto toEventShortDto(Event event, Long confirmedRequests, Long views, Long commentsCount) {
         return EventShortDto.builder()
                 .id(event.getId())
                 .annotation(event.getAnnotation())
@@ -94,16 +110,18 @@ public class EventMapper {
                 .paid(event.getPaid())
                 .title(event.getTitle())
                 .views(views)
+                .commentsCount(commentsCount)
                 .build();
     }
 
     public List<EventShortDto> toListEventShortDto(List<Event> events, Map<Long, Long> confirmedRequestsMap,
-                                                   Map<Long, Long> viewsMap) {
+                                                   Map<Long, Long> viewsMap, Map<Long, Long> commentsMap) {
         return events.stream()
                 .map(event -> toEventShortDto(
                         event,
                         confirmedRequestsMap.getOrDefault(event.getId(), 0L),
-                        viewsMap.getOrDefault(event.getId(), 0L)
+                        viewsMap.getOrDefault(event.getId(), 0L),
+                        commentsMap.getOrDefault(event.getId(), 0L)
                 ))
                 .toList();
     }
