@@ -20,8 +20,7 @@ public class EventShortDto {
 
     private CategoryResponseDto category;
 
-    @Builder.Default
-    private Long confirmedRequests = 0L;
+    private Long confirmedRequests;
 
     @JsonFormat(pattern = PatternDataTime.PATTERN)
     private LocalDateTime eventDate;
@@ -32,6 +31,7 @@ public class EventShortDto {
 
     private String title;
 
-    @Builder.Default
-    private Long views = 0L;
+    private Long views;
+
+    private Long commentsCount;
 }

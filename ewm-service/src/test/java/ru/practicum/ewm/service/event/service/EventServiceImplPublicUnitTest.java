@@ -11,6 +11,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import ru.practicum.ewm.service.adapter.EventStatsAdapter;
 import ru.practicum.ewm.service.category.model.Category;
+import ru.practicum.ewm.service.comment.dto.response.CommentEventResponseDto;
+import ru.practicum.ewm.service.comment.model.CommentState;
+import ru.practicum.ewm.service.comment.query.CommentQuery;
 import ru.practicum.ewm.service.event.dto.response.EventFullDto;
 import ru.practicum.ewm.service.event.dto.response.EventShortDto;
 import ru.practicum.ewm.service.event.model.*;
@@ -50,6 +53,9 @@ public class EventServiceImplPublicUnitTest {
     private RequestQuery requestQuery;
 
     @Mock
+    private CommentQuery commentQuery;
+
+    @Mock
     private EventStatsAdapter eventStatsAdapter;
 
     @InjectMocks
@@ -66,6 +72,8 @@ public class EventServiceImplPublicUnitTest {
                 .thenReturn(Map.of(EVENT_ID_1, 3L));
         when(eventStatsAdapter.getViews(List.of(EVENT_ID_1)))
                 .thenReturn(Map.of(EVENT_ID_1, 3L));
+        when(commentQuery.countCommentsByEventIdsAndState(List.of(EVENT_ID_1), CommentState.PUBLISHED))
+                .thenReturn(Map.of(EVENT_ID_1, 2L));
 
         List<EventShortDto> events = eventService.findAllPublic(
                 filterDefault(),
@@ -112,6 +120,9 @@ public class EventServiceImplPublicUnitTest {
                 .thenReturn(Map.of());
         when(eventStatsAdapter.getViews(List.of(EVENT_ID_1, EVENT_ID_2)))
                 .thenReturn(Map.of(EVENT_ID_1, 3L, EVENT_ID_2, 10L));
+        when(commentQuery.countCommentsByEventIdsAndState(List.of(EVENT_ID_1, EVENT_ID_2),
+                CommentState.PUBLISHED))
+                .thenReturn(Map.of(EVENT_ID_1, 1L, EVENT_ID_2, 4L));
 
         List<EventShortDto> events = eventService.findAllPublic(
                 filterDefault(),
@@ -121,6 +132,7 @@ public class EventServiceImplPublicUnitTest {
 
         assertThat(events).hasSize(2);
         assertThat(events.getFirst().getId()).isEqualTo(EVENT_ID_2);
+        assertThat(events).extracting(EventShortDto::getCommentsCount).containsExactly(4L, 1L);
     }
 
     @Test
@@ -135,6 +147,8 @@ public class EventServiceImplPublicUnitTest {
                 .thenReturn(Map.of());
         when(eventStatsAdapter.getViews(List.of(EVENT_ID_1, EVENT_ID_2)))
                 .thenReturn(Map.of(EVENT_ID_1, 3L, EVENT_ID_2, 10L));
+        when(commentQuery.countCommentsByEventIdsAndState(List.of(EVENT_ID_1, EVENT_ID_2), CommentState.PUBLISHED))
+                .thenReturn(Map.of(EVENT_ID_1, 5L, EVENT_ID_2, 3L));
 
         List<EventShortDto> events = eventService.findAllPublic(
                 filterDefault(),
@@ -144,6 +158,7 @@ public class EventServiceImplPublicUnitTest {
 
         assertThat(events).hasSize(1);
         assertThat(events.getFirst().getId()).isEqualTo(EVENT_ID_1);
+        assertThat(events.getFirst().getCommentsCount()).isEqualTo(5L);
     }
 
     @Test
@@ -248,6 +263,13 @@ public class EventServiceImplPublicUnitTest {
                 .thenReturn(3L);
         when(eventStatsAdapter.getViews(EVENT_ID_1))
                 .thenReturn(3L);
+
+        List<CommentEventResponseDto> comments = List.of(
+                CommentEventResponseDto.builder().id(100L).text("first").build(),
+                CommentEventResponseDto.builder().id(101L).text("second").build()
+        );
+        when(commentQuery.findCommentsWithAuthorByEventIdAndState(EVENT_ID_1, CommentState.PUBLISHED))
+                .thenReturn(comments);
 
         EventFullDto result = eventService.findByIdPublic(
                 EVENT_ID_1,
