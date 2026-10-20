@@ -23,7 +23,7 @@ public class CommentMapper {
                 .build();
     }
 
-    public CommentResponseDto toCommentResponseDto() {
+    public CommentResponseDto toCommentResponseDto(Comment comment) {
         return CommentResponseDto.builder()
                 .build();
     }
