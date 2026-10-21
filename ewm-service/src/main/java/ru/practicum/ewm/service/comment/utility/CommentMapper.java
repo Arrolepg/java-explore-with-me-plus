@@ -11,11 +11,6 @@ import java.util.List;
 
 @UtilityClass
 public class CommentMapper {
-    public Comment toComment() {
-        return Comment.builder()
-                .build();
-    }
-
     public CommentAuthorResponseDto toCommentAuthorResponseDto(Comment comment) {
         return CommentAuthorResponseDto.builder()
                 .id(comment.getId())
