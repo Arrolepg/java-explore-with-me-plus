@@ -16,9 +16,21 @@ public class CommentMapper {
                 .build();
     }
 
-    public CommentAuthorResponseDto toCommentAuthorResponseDto() {
+    public CommentAuthorResponseDto toCommentAuthorResponseDto(Comment comment) {
         return CommentAuthorResponseDto.builder()
+                .id(comment.getId())
+                .eventId(comment.getEvent().getId())
+                .text(comment.getText())
+                .createdOn(comment.getCreatedOn())
+                .publishedOn(comment.getPublishedOn())
+                .state(comment.getState())
                 .build();
+    }
+
+    public List<CommentAuthorResponseDto> toListCommentAuthorResponseDto(List<Comment> comments) {
+        return comments.stream()
+                .map(CommentMapper::toCommentAuthorResponseDto)
+                .toList();
     }
 
     public CommentEventResponseDto toCommentEventResponseDto(Comment comment) {

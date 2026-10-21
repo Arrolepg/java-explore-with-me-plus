@@ -11,6 +11,7 @@ import ru.practicum.ewm.service.request.utility.RequestMapper;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Component
@@ -39,5 +40,10 @@ public class RequestQueryImpl implements RequestQuery {
                         EventRequestsCount::eventId,
                         EventRequestsCount::count
                 ));
+    }
+
+    @Override
+    public Optional<Request> findByRequesterIdAndEventId(Long userId, Long eventId) {
+        return requestRepository.findByRequesterIdAndEventId(userId, eventId);
     }
 }
