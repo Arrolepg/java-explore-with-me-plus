@@ -33,4 +33,6 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
             "where r.event.id in ?1 and r.status = ?2 " +
             "group by r.event.id ")
     List<EventRequestsCount> countRequestsByEventIdsAndStatus(List<Long> eventIds, RequestStatus status);
+
+    Optional<Request> findByRequesterIdAndEventId(Long userId, Long eventId);
 }

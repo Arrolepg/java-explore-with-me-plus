@@ -9,8 +9,10 @@ import ru.practicum.ewm.service.comment.repository.projection.EventCommentsCount
 
 import java.util.List;
 
+import java.util.Optional;
+
 @Repository
-public interface CommentRepository extends JpaRepository<Comment, Long> {
+public interface CommentRepository extends JpaRepository<Comment, Long>, CommentSearchRepository {
     @Query("select " +
             "new ru.practicum.ewm.service.comment.repository.projection.EventCommentsCount(c.event.id, count(c)) " +
             "from Comment as c " +
@@ -27,4 +29,8 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
             "join fetch c.author " +
             "where c.event.id in ?1 and c.state = ?2 ")
     List<Comment> findCommentsByEventIdsAndStateWithAuthorFetch(List<Long> eventIds, CommentState commentState);
+
+    Optional<Comment> findByIdAndAuthorId(Long commentId, Long userId);
+
+    Boolean existsByAuthorIdAndEventId(Long userId, Long eventId);
 }

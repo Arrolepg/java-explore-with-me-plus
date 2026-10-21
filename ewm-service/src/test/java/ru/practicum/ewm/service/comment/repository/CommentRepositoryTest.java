@@ -10,8 +10,10 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.test.context.ActiveProfiles;
 import ru.practicum.ewm.service.category.model.Category;
 import ru.practicum.ewm.service.comment.model.Comment;
+import ru.practicum.ewm.service.comment.model.CommentSearchSort;
 import ru.practicum.ewm.service.comment.model.CommentState;
 import ru.practicum.ewm.service.comment.repository.projection.EventCommentsCount;
+import ru.practicum.ewm.service.comment.utility.CommentPaginationParams;
 import ru.practicum.ewm.service.event.model.Event;
 import ru.practicum.ewm.service.event.model.EventLocation;
 import ru.practicum.ewm.service.event.model.EventState;
@@ -19,6 +21,7 @@ import ru.practicum.ewm.service.user.model.User;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -214,6 +217,191 @@ public class CommentRepositoryTest {
         assertThat(result.getFirst().getEvent().getId()).isEqualTo(event1.getId());
     }
 
+    @Test
+    void findAllByAuthorIdReturnsOnlyAuthorCommentsOrderedById() {
+        User author = createUser("1");
+        User otherAuthor = createUser("2");
+        Category category = createCategory();
+
+        Event event1 = createEvent(author, category, "Event 1");
+        Event event2 = createEvent(author, category, "Event 2");
+        Event event3 = createEvent(author, category, "Event 3");
+
+        Comment comment1 = createComment(author, event1, CommentState.PENDING);
+        createComment(otherAuthor, event1, CommentState.PUBLISHED);
+        Comment comment2 = createComment(author, event2, CommentState.PUBLISHED);
+        Comment comment3 = createComment(author, event3, CommentState.REJECTED);
+
+        entityManager.flush();
+        entityManager.clear();
+
+        CommentPaginationParams params = new CommentPaginationParams(0, 10, null);
+
+        List<Comment> result = commentRepository.findAllByAuthorId(author.getId(), params);
+
+        assertThat(result)
+                .extracting(Comment::getId)
+                .containsExactly(comment1.getId(), comment2.getId(), comment3.getId());
+    }
+
+    @Test
+    void findAllByAuthorIdSortsByCreatedOnDescending() {
+        User author = createUser("1");
+        Category category = createCategory();
+
+        Event event1 = createEvent(author, category, "Event 1");
+        Event event2 = createEvent(author, category, "Event 2");
+        Event event3 = createEvent(author, category, "Event 3");
+
+        LocalDateTime date = LocalDateTime.of(2026, 10, 1, 12, 0);
+
+        Comment comment1 = createComment(author, event1, CommentState.PENDING);
+        comment1.setCreatedOn(date.plusDays(1));
+
+        Comment comment2 = createComment(author, event2, CommentState.PENDING);
+        comment2.setCreatedOn(date.plusDays(2));
+
+        Comment comment3 = createComment(author, event3, CommentState.PENDING);
+        comment3.setCreatedOn(date);
+
+        entityManager.flush();
+        entityManager.clear();
+
+        CommentPaginationParams params = new CommentPaginationParams(0, 10, CommentSearchSort.CREATE_DATE);
+
+        List<Comment> result = commentRepository.findAllByAuthorId(author.getId(), params);
+
+        assertThat(result)
+                .extracting(Comment::getId)
+                .containsExactly(comment2.getId(), comment1.getId(), comment3.getId());
+    }
+
+    @Test
+    void findAllByAuthorIdAppliesFromAndSize() {
+        User author = createUser("1");
+        Category category = createCategory();
+
+        Event event1 = createEvent(author, category, "Event 1");
+        Event event2 = createEvent(author, category, "Event 2");
+        Event event3 = createEvent(author, category, "Event 3");
+        Event event4 = createEvent(author, category, "Event 4");
+        Event event5 = createEvent(author, category, "Event 5");
+
+        createComment(author, event1, CommentState.PENDING);
+        Comment comment2 = createComment(author, event2, CommentState.PENDING);
+        Comment comment3 = createComment(author, event3, CommentState.PENDING);
+        createComment(author, event4, CommentState.PENDING);
+        createComment(author, event5, CommentState.PENDING);
+
+        entityManager.flush();
+        entityManager.clear();
+
+        CommentPaginationParams params = new CommentPaginationParams(1, 2, null);
+
+        List<Comment> result = commentRepository.findAllByAuthorId(author.getId(), params);
+
+        assertThat(result)
+                .extracting(Comment::getId)
+                .containsExactly(comment2.getId(), comment3.getId());
+    }
+
+    @Test
+    void findAllByAuthorIdReturnsEmptyWhenAuthorHasNoComments() {
+        User author = createUser("1");
+        User otherAuthor = createUser("2");
+        Category category = createCategory();
+        Event event = createEvent(otherAuthor, category, "Event");
+
+        createComment(otherAuthor, event, CommentState.PUBLISHED);
+
+        entityManager.flush();
+        entityManager.clear();
+
+        CommentPaginationParams params = new CommentPaginationParams(0, 10, null);
+
+        List<Comment> result = commentRepository.findAllByAuthorId(author.getId(), params);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void findByIdAndAuthorIdReturnsAuthorComment() {
+        User author = createUser("1");
+        Category category = createCategory();
+        Event event = createEvent(author, category, "Event");
+        Comment comment = createComment(author, event, CommentState.PENDING);
+
+        entityManager.flush();
+        entityManager.clear();
+
+        Optional<Comment> result = commentRepository.findByIdAndAuthorId(comment.getId(), author.getId());
+
+        assertThat(result).isPresent();
+        assertThat(result.orElseThrow().getId()).isEqualTo(comment.getId());
+        assertThat(result.orElseThrow().getAuthor().getId()).isEqualTo(author.getId());
+    }
+
+    @Test
+    void findByIdAndAuthorIdReturnsEmptyForAnotherAuthor() {
+        User author = createUser("1");
+        User otherAuthor = createUser("2");
+        Category category = createCategory();
+        Event event = createEvent(author, category, "Event");
+        Comment comment = createComment(author, event, CommentState.PENDING);
+
+        entityManager.flush();
+        entityManager.clear();
+
+        Optional<Comment> result = commentRepository.findByIdAndAuthorId(comment.getId(), otherAuthor.getId());
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void findByIdAndAuthorIdReturnsEmptyWhenCommentDoesNotExist() {
+        User author = createUser("1");
+
+        entityManager.flush();
+        entityManager.clear();
+
+        Optional<Comment> result = commentRepository.findByIdAndAuthorId(-1L, author.getId());
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void existsByAuthorIdAndEventIdReturnsTrueWhenCommentExists() {
+        User author = createUser("1");
+        Category category = createCategory();
+        Event event = createEvent(author, category, "Event");
+
+        createComment(author, event, CommentState.PENDING);
+
+        entityManager.flush();
+        entityManager.clear();
+
+        Boolean result = commentRepository.existsByAuthorIdAndEventId(author.getId(), event.getId());
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void existsByAuthorIdAndEventIdReturnsFalseForDifferentAuthorOrEvent() {
+        User author = createUser("1");
+        User otherAuthor = createUser("2");
+        Category category = createCategory();
+        Event event1 = createEvent(author, category, "Event 1");
+        Event event2 = createEvent(author, category, "Event 2");
+
+        createComment(author, event1, CommentState.PENDING);
+
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(commentRepository.existsByAuthorIdAndEventId(otherAuthor.getId(), event1.getId())).isFalse();
+        assertThat(commentRepository.existsByAuthorIdAndEventId(author.getId(), event2.getId())).isFalse();
+    }
+
     private User createUser(String string) {
         User user = new User();
         user.setName(NAME + "-" + string);
@@ -245,7 +433,7 @@ public class CommentRepositoryTest {
         return entityManager.persistAndFlush(event);
     }
 
-    private void createComment(User author, Event event, CommentState state) {
+    private Comment createComment(User author, Event event, CommentState state) {
         Comment comment = Comment.builder()
                 .author(author)
                 .event(event)
@@ -253,7 +441,7 @@ public class CommentRepositoryTest {
                 .state(state)
                 .createdOn(LocalDateTime.now())
                 .build();
-        entityManager.persistAndFlush(comment);
+        return entityManager.persistAndFlush(comment);
     }
 
     private EventCommentsCount findById(List<EventCommentsCount> rows, Long eventId) {
