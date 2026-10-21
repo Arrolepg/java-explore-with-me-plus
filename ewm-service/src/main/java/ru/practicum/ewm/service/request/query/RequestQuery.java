@@ -6,7 +6,6 @@ import ru.practicum.ewm.service.request.model.RequestStatus;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 public interface RequestQuery {
     List<ParticipationRequestDto> findRequests(Long eventId);
@@ -15,5 +14,5 @@ public interface RequestQuery {
 
     Map<Long, Long> countRequestsByEventIdsAndStatus(List<Long> eventIds, RequestStatus requestStatus);
 
-    Optional<Request> findByRequesterIdAndEventId(Long userId, Long eventId);
+    Request findByRequesterIdAndEventId(Long userId, Long eventId);
 }

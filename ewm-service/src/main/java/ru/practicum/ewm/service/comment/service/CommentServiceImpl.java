@@ -75,9 +75,7 @@ public class CommentServiceImpl implements CommentService {
             throw new ConflictException("Комментарий к событию id = " + eventId + " был создан ранее");
         }
 
-        Request request = requestQuery.findByRequesterIdAndEventId(userId, eventId)
-                .orElseThrow(() -> new NotFoundException("Пользователь id = " + userId
-                        + " не создавал запрос на участие в событии id = " + eventId));
+        Request request = requestQuery.findByRequesterIdAndEventId(userId, eventId);
 
         if (request.getStatus() != RequestStatus.CONFIRMED) {
             throw new ConflictException("Заявка id = " + request.getId() + " пользователя id = " + userId +

@@ -2,6 +2,7 @@ package ru.practicum.ewm.service.request.query;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import ru.practicum.ewm.service.exception.NotFoundException;
 import ru.practicum.ewm.service.request.dto.ParticipationRequestDto;
 import ru.practicum.ewm.service.request.model.Request;
 import ru.practicum.ewm.service.request.model.RequestStatus;
@@ -11,7 +12,6 @@ import ru.practicum.ewm.service.request.utility.RequestMapper;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Component
@@ -43,7 +43,9 @@ public class RequestQueryImpl implements RequestQuery {
     }
 
     @Override
-    public Optional<Request> findByRequesterIdAndEventId(Long userId, Long eventId) {
-        return requestRepository.findByRequesterIdAndEventId(userId, eventId);
+    public Request findByRequesterIdAndEventId(Long userId, Long eventId) {
+        return requestRepository.findByRequesterIdAndEventId(userId, eventId)
+                .orElseThrow(() -> new NotFoundException("Пользователь id = " + userId
+                        + " не создавал запрос на участие в событии id = " + eventId));
     }
 }

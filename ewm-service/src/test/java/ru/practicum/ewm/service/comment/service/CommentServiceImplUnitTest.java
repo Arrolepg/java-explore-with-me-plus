@@ -276,6 +276,6 @@ class CommentServiceImplUnitTest {
                 .build();
 
         when(requestQuery.findByRequesterIdAndEventId(USER_ID, EVENT_ID))
-                .thenReturn(Optional.of(participation));
+                .thenReturn(participation);
     }
 }
