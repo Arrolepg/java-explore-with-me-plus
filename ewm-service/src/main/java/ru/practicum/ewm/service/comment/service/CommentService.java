@@ -13,6 +13,7 @@ public interface CommentService {
     List<CommentResponseDto> findAllByAdmin(AdminCommentSearchFilter searchFilter, CommentPaginationParams commentPaginationParams);
 
     CommentResponseDto updateByAdmin(Long commentId, CommentAdminUpdateDto commentDto);
+
     List<CommentAuthorResponseDto> findAllByAuthor(Long userId, CommentPaginationParams params);
 
     CommentAuthorResponseDto findById(Long userId, Long commentId);

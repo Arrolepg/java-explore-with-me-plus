@@ -15,9 +15,6 @@ import jakarta.persistence.criteria.*;
 
 import java.util.ArrayList;
 
-import ru.practicum.ewm.service.comment.model.Comment;
-import ru.practicum.ewm.service.comment.model.CommentSearchSort;
-import ru.practicum.ewm.service.comment.utility.CommentPaginationParams;
 
 import java.util.List;
 
@@ -53,6 +50,8 @@ public class CommentSearchRepositoryImpl implements CommentSearchRepository {
         return typedQuery.setFirstResult(params.from())
                 .setMaxResults(params.size())
                 .getResultList();
+    }
+
     public List<Comment> findAllByAuthorId(Long userId, CommentPaginationParams params) {
         String jpql = "select c from Comment c where c.author.id = :userId";
 
