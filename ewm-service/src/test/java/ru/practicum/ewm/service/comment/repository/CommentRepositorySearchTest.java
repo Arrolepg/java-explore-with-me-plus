@@ -1,0 +1,207 @@
+package ru.practicum.ewm.service.comment.repository;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.test.context.ActiveProfiles;
+import ru.practicum.ewm.service.category.model.Category;
+import ru.practicum.ewm.service.comment.model.Comment;
+import ru.practicum.ewm.service.comment.model.CommentSearchSort;
+import ru.practicum.ewm.service.comment.model.CommentState;
+import ru.practicum.ewm.service.comment.utility.CommentPaginationParams;
+import ru.practicum.ewm.service.event.model.Event;
+import ru.practicum.ewm.service.event.model.EventLocation;
+import ru.practicum.ewm.service.event.model.EventState;
+import ru.practicum.ewm.service.user.model.User;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+@DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@ImportAutoConfiguration(JacksonAutoConfiguration.class)
+@ActiveProfiles("test")
+public class CommentRepositorySearchTest {
+    private static final String NAME = "Author";
+
+    @Autowired
+    private TestEntityManager entityManager;
+
+    @Autowired
+    private CommentRepository commentRepository;
+
+    @Test
+    void findAllWithFetchAppliesSpecificationFilterByStateAndText() {
+        // Создаем трех РАЗНЫХ авторов для соблюдения unique_comment (event_id, author_id)
+        User author1 = createUser("1");
+        User author2 = createUser("2");
+        User author3 = createUser("3");
+        Category category = createCategory();
+        Event event = createEvent(author1, category, "Event");
+
+        // У каждого комментария свой уникальный автор в рамках одного события
+        createCommentWithText(author1, event, CommentState.PUBLISHED, "Matching text for search");
+        createCommentWithText(author2, event, CommentState.PENDING, "Matching text for search");
+        createCommentWithText(author3, event, CommentState.PUBLISHED, "Other random text");
+
+        entityManager.flush();
+        entityManager.clear();
+
+        // Спецификация: фильтр по статусу PUBLISHED и подстроке в тексте
+        Specification<Comment> spec = (root, query, cb) -> cb.and(
+                cb.equal(root.get("state"), CommentState.PUBLISHED),
+                cb.like(cb.lower(root.get("text")), "%matching%")
+        );
+
+        // Передаем null в качестве сортировки, чтобы сработал блок else (сортировка по умолчанию)
+        CommentPaginationParams params = new CommentPaginationParams(0, 10, null);
+
+        List<Comment> result = commentRepository.findAllWithFetch(spec, params);
+
+        // Проверяем, что отфильтровался ровно один нужный комментарий
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getText()).isEqualTo("Matching text for search");
+        assertThat(result.getFirst().getState()).isEqualTo(CommentState.PUBLISHED);
+        assertThat(result.getFirst().getAuthor().getName()).isEqualTo("Author-1");
+    }
+
+    @Test
+    void findAllWithFetchReturnsEmptyWhenNoCommentsMatchSpecification() {
+        User author = createUser("1");
+        Category category = createCategory();
+        Event event = createEvent(author, category, "Event");
+
+        createCommentWithText(author, event, CommentState.PUBLISHED, "Normal comment");
+
+        entityManager.flush();
+        entityManager.clear();
+
+        // Спецификация ищет текст, которого нет в базе
+        Specification<Comment> spec = (root, query, cb) -> cb.like(root.get("text"), "%Absent text%");
+        CommentPaginationParams params = new CommentPaginationParams(0, 10, null);
+
+        List<Comment> result = commentRepository.findAllWithFetch(spec, params);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void findAllWithFetchSortsByCreateDateDescCorrectly() {
+        User author1 = createUser("1");
+        User author2 = createUser("2");
+        Category category = createCategory();
+        Event event = createEvent(author1, category, "Event");
+
+        // Создаем комментарии от РАЗНЫХ авторов с искусственным сдвигом по времени
+        Comment olderComment = Comment.builder()
+                .author(author1)
+                .event(event)
+                .text("Older comment")
+                .state(CommentState.PUBLISHED)
+                .createdOn(LocalDateTime.now().minusDays(2))
+                .build();
+        entityManager.persist(olderComment);
+
+        Comment newerComment = Comment.builder()
+                .author(author2)
+                .event(event)
+                .text("Newer comment")
+                .state(CommentState.PUBLISHED)
+                .createdOn(LocalDateTime.now().minusDays(1))
+                .build();
+        entityManager.persist(newerComment);
+
+        entityManager.flush();
+        entityManager.clear();
+
+        Specification<Comment> spec = (root, query, cb) -> cb.conjunction(); // Выбираем все записи
+
+        // Тестируем явную сортировку CREATE_DATE (убывание по дате создания)
+        CommentPaginationParams params = new CommentPaginationParams(0, 10, CommentSearchSort.CREATE_DATE);
+
+        List<Comment> result = commentRepository.findAllWithFetch(spec, params);
+
+        assertThat(result).hasSize(2);
+        // Первым должен вернуться более новый комментарий (DESC)
+        assertThat(result.get(0).getText()).isEqualTo("Newer comment");
+        assertThat(result.get(1).getText()).isEqualTo("Older comment");
+    }
+
+    @Test
+    void findAllWithFetchAppliesPaginationFromAndSizeCorrectly() {
+        User author1 = createUser("1");
+        User author2 = createUser("2");
+        User author3 = createUser("3");
+        Category category = createCategory();
+        Event event = createEvent(author1, category, "Event");
+
+        // Три комментария от трех разных авторов для пагинации
+        createCommentWithText(author1, event, CommentState.PUBLISHED, "Comment 1");
+        createCommentWithText(author2, event, CommentState.PUBLISHED, "Comment 2");
+        createCommentWithText(author3, event, CommentState.PUBLISHED, "Comment 3");
+
+        entityManager.flush();
+        entityManager.clear();
+
+        Specification<Comment> spec = (root, query, cb) -> cb.conjunction();
+
+        // Пагинация: пропустить 1 элемент (from=1), взять 1 элемент (size=1)
+        CommentPaginationParams params = new CommentPaginationParams(1, 1, null);
+
+        List<Comment> result = commentRepository.findAllWithFetch(spec, params);
+
+        // Должен вернуться ровно один комментарий, идущий вторым по порядку (Comment 2)
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getText()).isEqualTo("Comment 2");
+    }
+
+    // Вспомогательные методы генерации данных
+    private User createUser(String string) {
+        User user = new User();
+        user.setName(NAME + "-" + string);
+        user.setEmail(user.getName() + "@mail.com");
+        return entityManager.persistAndFlush(user);
+    }
+
+    private Category createCategory() {
+        Category category = new Category();
+        category.setName("Cat");
+        return entityManager.persistAndFlush(category);
+    }
+
+    private Event createEvent(User initiator, Category category, String title) {
+        Event event = Event.builder()
+                .annotation("Some annotation text here for event")
+                .category(category)
+                .description("Some description text here for event")
+                .eventDate(LocalDateTime.now().plusDays(10))
+                .eventLocation(EventLocation.builder().lat(55.75f).lon(37.62f).build())
+                .paid(false)
+                .participantLimit(10)
+                .requestModeration(true)
+                .title(title)
+                .state(EventState.PENDING)
+                .createdOn(LocalDateTime.now())
+                .initiator(initiator)
+                .build();
+        return entityManager.persistAndFlush(event);
+    }
+
+    private void createCommentWithText(User author, Event event, CommentState state, String text) {
+        Comment comment = Comment.builder()
+                .author(author)
+                .event(event)
+                .text(text)
+                .state(state)
+                .createdOn(LocalDateTime.now())
+                .build();
+        entityManager.persistAndFlush(comment);
+    }
+}

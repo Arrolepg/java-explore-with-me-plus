@@ -13,6 +13,7 @@ import ru.practicum.ewm.service.comment.model.AdminCommentStateAction;
 import ru.practicum.ewm.service.comment.model.Comment;
 import ru.practicum.ewm.service.comment.model.CommentState;
 import ru.practicum.ewm.service.comment.repository.CommentRepository;
+import ru.practicum.ewm.service.comment.repository.CommentSearchRepository;
 import ru.practicum.ewm.service.comment.repository.CommentSpecifications;
 import ru.practicum.ewm.service.comment.utility.AdminCommentSearchFilter;
 import ru.practicum.ewm.service.comment.utility.CommentMapper;
@@ -31,12 +32,13 @@ import java.util.List;
 public class CommentServiceImpl implements CommentService {
     private static final Sort SORT_BY_ID_ASC = Sort.by(Sort.Direction.ASC, Event_.ID);
     private final CommentRepository commentRepository;
+    private final CommentSearchRepository commentSearchRepository;
 
     @Override
     public List<CommentResponseDto> findAllByAdmin(AdminCommentSearchFilter searchFilter, CommentPaginationParams commentPaginationParams) {
 
-        List<Comment> comments = commentRepository.findAllWithFetch(CommentSpecifications.forAdminSearch(searchFilter),
-                toPageable(commentPaginationParams));
+        List<Comment> comments = commentSearchRepository.findAllWithFetch(CommentSpecifications.forAdminSearch(searchFilter),
+                commentPaginationParams);
         if (comments.isEmpty()) {
             return List.of();
         }

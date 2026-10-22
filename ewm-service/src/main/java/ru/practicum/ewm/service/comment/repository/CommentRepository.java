@@ -1,7 +1,5 @@
 package ru.practicum.ewm.service.comment.repository;
 
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -11,12 +9,10 @@ import ru.practicum.ewm.service.comment.repository.projection.EventCommentsCount
 
 import java.util.List;
 
-import java.util.List;
+import java.util.Optional;
 
 @Repository
-public interface CommentRepository extends JpaRepository<Comment, Long> {
-    List<Comment> findAllWithFetch(Specification<Comment> specification, Pageable pageable);
-}
+public interface CommentRepository extends JpaRepository<Comment, Long>, CommentSearchRepository {
     @Query("select " +
             "new ru.practicum.ewm.service.comment.repository.projection.EventCommentsCount(c.event.id, count(c)) " +
             "from Comment as c " +
@@ -33,4 +29,8 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
             "join fetch c.author " +
             "where c.event.id in ?1 and c.state = ?2 ")
     List<Comment> findCommentsByEventIdsAndStateWithAuthorFetch(List<Long> eventIds, CommentState commentState);
+
+    Optional<Comment> findByIdAndAuthorId(Long commentId, Long userId);
+
+    Boolean existsByAuthorIdAndEventId(Long userId, Long eventId);
 }
