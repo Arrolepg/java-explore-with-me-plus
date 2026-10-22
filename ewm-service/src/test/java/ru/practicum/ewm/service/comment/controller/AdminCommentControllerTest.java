@@ -13,6 +13,7 @@ import ru.practicum.ewm.service.comment.dto.request.CommentAdminUpdateDto;
 import ru.practicum.ewm.service.comment.dto.response.CommentResponseDto;
 import ru.practicum.ewm.service.comment.model.AdminCommentStateAction;
 import ru.practicum.ewm.service.comment.model.CommentState;
+import ru.practicum.ewm.service.comment.model.CommentStateFilter;
 import ru.practicum.ewm.service.comment.service.CommentService;
 import ru.practicum.ewm.service.comment.utility.AdminCommentSearchFilter;
 import ru.practicum.ewm.service.comment.utility.CommentPaginationParams;
@@ -69,7 +70,7 @@ public class AdminCommentControllerTest {
                     assertAll(
                             () -> assertThat(request.users()).containsExactly(1L, 2L),
                             () -> assertThat(request.events()).containsExactly(10L, 11L),
-                            () -> assertThat(request.state()).isEqualTo(CommentState.PUBLISHED.name())
+                            () -> assertThat(request.state()).isEqualTo(CommentStateFilter.PUBLISHED)
                     );
                     return true;
                 }),
