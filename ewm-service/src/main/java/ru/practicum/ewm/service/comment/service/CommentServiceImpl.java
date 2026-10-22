@@ -12,13 +12,13 @@ import ru.practicum.ewm.service.comment.dto.response.CommentResponseDto;
 import ru.practicum.ewm.service.comment.model.AdminCommentStateAction;
 import ru.practicum.ewm.service.comment.model.Comment;
 import ru.practicum.ewm.service.comment.model.CommentState;
+import ru.practicum.ewm.service.comment.model.Comment_;
 import ru.practicum.ewm.service.comment.repository.CommentRepository;
 import ru.practicum.ewm.service.comment.repository.CommentSpecifications;
 import ru.practicum.ewm.service.comment.utility.AdminCommentSearchFilter;
 import ru.practicum.ewm.service.comment.utility.CommentMapper;
 import ru.practicum.ewm.service.comment.utility.CommentPaginationParams;
 import ru.practicum.ewm.service.event.dto.response.EventShortDto;
-import ru.practicum.ewm.service.event.model.*;
 
 import ru.practicum.ewm.service.exception.ConflictException;
 import ru.practicum.ewm.service.exception.NotFoundException;
@@ -48,7 +48,7 @@ public class CommentServiceImpl implements CommentService {
     private final UserQuery userQuery;
     private final EventQuery eventQuery;
     private final RequestQuery requestQuery;
-    private static final Sort SORT_BY_ID_ASC = Sort.by(Sort.Direction.ASC);
+    private static final Sort SORT_BY_ID_ASC = Sort.by(Sort.Direction.ASC, Comment_.ID);
 
 
     @Override
@@ -160,9 +160,9 @@ public class CommentServiceImpl implements CommentService {
                 .map(comment -> comment.getEvent().getId())
                 .distinct()
                 .toList();
-        List<Event> events = eventQuery.findAllByIdWithFetch(eventIds);
-        List<EventShortDto> eventDtos = eventQuery.getEventsDto(events);
-        Map<Long, EventShortDto> eventsMap = eventDtos.stream()
+
+        List<EventShortDto> events = eventQuery.getEventsDtoByIds(eventIds);
+        Map<Long, EventShortDto> eventsMap = events.stream()
                 .collect(Collectors.toMap(EventShortDto::getId, dto -> dto));
         return CommentMapper.toListCommentResponseDto(comments, eventsMap);
     }
@@ -177,10 +177,9 @@ public class CommentServiceImpl implements CommentService {
         checkAdminStateAction(comment, commentDto);
         applyAdminStateAction(comment, commentDto.getAdminCommentStateAction());
 
-        List<EventShortDto> eventDtos = eventQuery.getEventsDto(List.of(comment.getEvent()));
-        EventShortDto realEventDto = eventDtos.isEmpty() ? null : eventDtos.getFirst();
+        EventShortDto event = eventQuery.getEventDtoById(comment.getEvent().getId());
 
-        return CommentMapper.toCommentResponseDto(comment, realEventDto);
+        return CommentMapper.toCommentResponseDto(comment, event);
     }
 
     private void checkAdminStateAction(Comment comment, CommentAdminUpdateDto commentDto) {
@@ -191,7 +190,8 @@ public class CommentServiceImpl implements CommentService {
                 throw new ConflictException("Нельзя опубликовать комментарий, так как он не в состоянии "
                         + CommentState.PENDING + ": " + comment.getState());
             }
-        } else if (adminCommentStateAction == AdminCommentStateAction.REJECT_COMMENT && comment.getState() == CommentState.PUBLISHED) {
+        } else if (adminCommentStateAction == AdminCommentStateAction.REJECT_COMMENT
+                && comment.getState() == CommentState.PUBLISHED) {
             throw new ConflictException("Нельзя отклонить комментарий, так как он уже опубликован");
         }
     }
@@ -207,10 +207,17 @@ public class CommentServiceImpl implements CommentService {
     }
 
     private Pageable toPageable(CommentPaginationParams commentPaginationParams) {
+        if (commentPaginationParams.sort() == null) {
+            return PageRequest.of(
+                    commentPaginationParams.from() / commentPaginationParams.size(),
+                    commentPaginationParams.size(),
+                    SORT_BY_ID_ASC);
+        }
+
         return PageRequest.of(
                 commentPaginationParams.from() / commentPaginationParams.size(),
                 commentPaginationParams.size(),
-                SORT_BY_ID_ASC);
+                Sort.by(Sort.Direction.DESC, Comment_.CREATED_ON)
+                        .and(SORT_BY_ID_ASC));
     }
-
 }

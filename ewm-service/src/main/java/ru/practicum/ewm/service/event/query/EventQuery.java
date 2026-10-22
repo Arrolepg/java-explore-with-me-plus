@@ -14,5 +14,7 @@ public interface EventQuery {
 
     List<EventShortDto> getEventsDto(List<Event> events);
 
+    List<EventShortDto> getEventsDtoByIds(List<Long> eventIds);
 
+    EventShortDto getEventDtoById(Long eventId);
 }

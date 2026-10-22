@@ -30,22 +30,18 @@ public class CommentSearchRepositoryImpl implements CommentSearchRepository {
         Root<Comment> root = query.from(Comment.class);
 
         root.fetch("author", JoinType.LEFT);
-        root.fetch("event", JoinType.LEFT);
+        //root.fetch("event", JoinType.LEFT);
 
         Predicate predicate = specification.toPredicate(root, query, cb);
         if (predicate != null) {
             query.where(predicate);
         }
-
         query.orderBy(QueryUtils.toOrders(pageable.getSort(), root, cb));
 
-        TypedQuery<Comment> typedQuery = entityManager.createQuery(query);
-        if (pageable.isPaged()) {
-            typedQuery.setFirstResult((int) pageable.getOffset());
-            typedQuery.setMaxResults(pageable.getPageSize());
-        }
-
-        return typedQuery.getResultList();
+        return entityManager.createQuery(query)
+                .setFirstResult((int) pageable.getOffset())
+                .setMaxResults(pageable.getPageSize())
+                .getResultList();
     }
 
     public List<Comment> findAllByAuthorId(Long userId, CommentPaginationParams params) {

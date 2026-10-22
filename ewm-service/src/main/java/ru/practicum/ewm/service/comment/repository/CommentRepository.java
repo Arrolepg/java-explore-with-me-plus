@@ -20,6 +20,8 @@ public interface CommentRepository extends JpaRepository<Comment, Long>, Comment
             "group by c.event.id ")
     List<EventCommentsCount> countCommentsByEventIdsAndState(List<Long> eventIds, CommentState commentState);
 
+    long countCommentsByEventIdAndState(Long eventId, CommentState state);
+
     @Query("select c from Comment as c " +
             "join fetch c.author " +
             "where c.event.id = ?1 and c.state = ?2 ")
