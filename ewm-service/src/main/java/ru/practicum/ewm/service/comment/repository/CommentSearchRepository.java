@@ -16,4 +16,5 @@ public interface CommentSearchRepository {
      */
     List<Comment> findAllWithFetch(Specification<Comment> specification, CommentPaginationParams params);
 
+    List<Comment> findAllByAuthorId(Long userId, CommentPaginationParams params);
 }

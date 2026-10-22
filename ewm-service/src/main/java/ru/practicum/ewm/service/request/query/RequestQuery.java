@@ -1,6 +1,7 @@
 package ru.practicum.ewm.service.request.query;
 
 import ru.practicum.ewm.service.request.dto.ParticipationRequestDto;
+import ru.practicum.ewm.service.request.model.Request;
 import ru.practicum.ewm.service.request.model.RequestStatus;
 
 import java.util.List;
@@ -12,4 +13,6 @@ public interface RequestQuery {
     long countRequestsByEventIdAndStatus(Long eventId, RequestStatus requestStatus);
 
     Map<Long, Long> countRequestsByEventIdsAndStatus(List<Long> eventIds, RequestStatus requestStatus);
+
+    Request findByRequesterIdAndEventId(Long userId, Long eventId);
 }

@@ -13,14 +13,21 @@ import java.util.List;
 
 @UtilityClass
 public class CommentMapper {
-    public Comment toComment() {
-        return Comment.builder()
+    public CommentAuthorResponseDto toCommentAuthorResponseDto(Comment comment) {
+        return CommentAuthorResponseDto.builder()
+                .id(comment.getId())
+                .eventId(comment.getEvent().getId())
+                .text(comment.getText())
+                .createdOn(comment.getCreatedOn())
+                .publishedOn(comment.getPublishedOn())
+                .state(comment.getState())
                 .build();
     }
 
-    public CommentAuthorResponseDto toCommentAuthorResponseDto() {
-        return CommentAuthorResponseDto.builder()
-                .build();
+    public List<CommentAuthorResponseDto> toListCommentAuthorResponseDto(List<Comment> comments) {
+        return comments.stream()
+                .map(CommentMapper::toCommentAuthorResponseDto)
+                .toList();
     }
 
     public CommentEventResponseDto toCommentEventResponseDto(Comment comment) {

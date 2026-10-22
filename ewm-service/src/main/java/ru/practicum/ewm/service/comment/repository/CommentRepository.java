@@ -34,3 +34,4 @@ public interface CommentRepository extends JpaRepository<Comment, Long>, Comment
 
     Boolean existsByAuthorIdAndEventId(Long userId, Long eventId);
 }
+}
