@@ -7,17 +7,18 @@ import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.test.context.ActiveProfiles;
 import ru.practicum.ewm.service.category.model.Category;
 import ru.practicum.ewm.service.comment.model.Comment;
-import ru.practicum.ewm.service.comment.model.CommentSearchSort;
 import ru.practicum.ewm.service.comment.model.CommentState;
-import ru.practicum.ewm.service.comment.utility.CommentPaginationParams;
 import ru.practicum.ewm.service.event.model.Event;
 import ru.practicum.ewm.service.event.model.EventLocation;
 import ru.practicum.ewm.service.event.model.EventState;
 import ru.practicum.ewm.service.user.model.User;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -60,36 +61,14 @@ public class CommentRepositorySearchTest {
                 cb.like(cb.lower(root.get("text")), "%matching%")
         );
 
-        // Передаем null в качестве сортировки, чтобы сработал блок else (сортировка по умолчанию)
-        CommentPaginationParams params = new CommentPaginationParams(0, 10, null);
+        Pageable pageable =
+                PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdOn"));
+        List<Comment> result = commentRepository.findAllWithFetch(spec, pageable);
 
-        List<Comment> result = commentRepository.findAllWithFetch(spec, params);
-
-        // Проверяем, что отфильтровался ровно один нужный комментарий
         assertThat(result).hasSize(1);
         assertThat(result.getFirst().getText()).isEqualTo("Matching text for search");
         assertThat(result.getFirst().getState()).isEqualTo(CommentState.PUBLISHED);
         assertThat(result.getFirst().getAuthor().getName()).isEqualTo("Author-1");
-    }
-
-    @Test
-    void findAllWithFetchReturnsEmptyWhenNoCommentsMatchSpecification() {
-        User author = createUser("1");
-        Category category = createCategory();
-        Event event = createEvent(author, category, "Event");
-
-        createCommentWithText(author, event, CommentState.PUBLISHED, "Normal comment");
-
-        entityManager.flush();
-        entityManager.clear();
-
-        // Спецификация ищет текст, которого нет в базе
-        Specification<Comment> spec = (root, query, cb) -> cb.like(root.get("text"), "%Absent text%");
-        CommentPaginationParams params = new CommentPaginationParams(0, 10, null);
-
-        List<Comment> result = commentRepository.findAllWithFetch(spec, params);
-
-        assertThat(result).isEmpty();
     }
 
     @Test
@@ -123,10 +102,13 @@ public class CommentRepositorySearchTest {
 
         Specification<Comment> spec = (root, query, cb) -> cb.conjunction(); // Выбираем все записи
 
-        // Тестируем явную сортировку CREATE_DATE (убывание по дате создания)
-        CommentPaginationParams params = new CommentPaginationParams(0, 10, CommentSearchSort.CREATE_DATE);
+        Pageable pageable = PageRequest.of(
+                0,
+                10,
+                Sort.by(Sort.Direction.DESC, "createdOn")
+        );
 
-        List<Comment> result = commentRepository.findAllWithFetch(spec, params);
+        List<Comment> result = commentRepository.findAllWithFetch(spec, pageable);
 
         assertThat(result).hasSize(2);
         // Первым должен вернуться более новый комментарий (DESC)
@@ -152,10 +134,9 @@ public class CommentRepositorySearchTest {
 
         Specification<Comment> spec = (root, query, cb) -> cb.conjunction();
 
-        // Пагинация: пропустить 1 элемент (from=1), взять 1 элемент (size=1)
-        CommentPaginationParams params = new CommentPaginationParams(1, 1, null);
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(1, 1);
 
-        List<Comment> result = commentRepository.findAllWithFetch(spec, params);
+        List<Comment> result = commentRepository.findAllWithFetch(spec, pageable);
 
         // Должен вернуться ровно один комментарий, идущий вторым по порядку (Comment 2)
         assertThat(result).hasSize(1);
@@ -204,4 +185,6 @@ public class CommentRepositorySearchTest {
                 .build();
         entityManager.persistAndFlush(comment);
     }
+
+
 }

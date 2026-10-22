@@ -33,7 +33,7 @@ public class CommentSpecifications {
     }
 
     private Specification<Comment> stateEqualsTo(String state) {
-        if (state == null) {
+        if (state == null || "ALL".equalsIgnoreCase(state)) {
             return null;
         }
 

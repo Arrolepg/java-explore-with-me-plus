@@ -13,11 +13,11 @@ import ru.practicum.ewm.service.comment.model.AdminCommentStateAction;
 import ru.practicum.ewm.service.comment.model.Comment;
 import ru.practicum.ewm.service.comment.model.CommentState;
 import ru.practicum.ewm.service.comment.repository.CommentRepository;
-import ru.practicum.ewm.service.comment.repository.CommentSearchRepository;
 import ru.practicum.ewm.service.comment.repository.CommentSpecifications;
 import ru.practicum.ewm.service.comment.utility.AdminCommentSearchFilter;
 import ru.practicum.ewm.service.comment.utility.CommentMapper;
 import ru.practicum.ewm.service.comment.utility.CommentPaginationParams;
+import ru.practicum.ewm.service.event.dto.response.EventShortDto;
 import ru.practicum.ewm.service.event.model.*;
 
 import ru.practicum.ewm.service.exception.ConflictException;
@@ -36,6 +36,8 @@ import ru.practicum.ewm.service.user.query.UserQuery;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -46,8 +48,8 @@ public class CommentServiceImpl implements CommentService {
     private final UserQuery userQuery;
     private final EventQuery eventQuery;
     private final RequestQuery requestQuery;
-    private static final Sort SORT_BY_ID_ASC = Sort.by(Sort.Direction.ASC, Event_.ID);
-    private final CommentSearchRepository commentSearchRepository;
+    private static final Sort SORT_BY_ID_ASC = Sort.by(Sort.Direction.ASC);
+
 
     @Override
     public List<CommentAuthorResponseDto> findAllByAuthor(Long userId, CommentPaginationParams params) {
@@ -146,16 +148,23 @@ public class CommentServiceImpl implements CommentService {
     @Override
     public List<CommentResponseDto> findAllByAdmin(AdminCommentSearchFilter searchFilter, CommentPaginationParams commentPaginationParams) {
 
-        List<Comment> comments = commentSearchRepository.findAllWithFetch(CommentSpecifications.forAdminSearch(searchFilter),
-                commentPaginationParams);
+        List<Comment> comments = commentRepository.findAllWithFetch(
+                CommentSpecifications.forAdminSearch(searchFilter),
+                toPageable(commentPaginationParams)
+        );
+
         if (comments.isEmpty()) {
             return List.of();
         }
-
-
-        return comments.stream()
-                .map(comment -> CommentMapper.toCommentResponseDto(comment))
+        List<Long> eventIds = comments.stream()
+                .map(comment -> comment.getEvent().getId())
+                .distinct()
                 .toList();
+        List<Event> events = eventQuery.findAllByIdWithFetch(eventIds);
+        List<EventShortDto> eventDtos = eventQuery.getEventsDto(events);
+        Map<Long, EventShortDto> eventsMap = eventDtos.stream()
+                .collect(Collectors.toMap(EventShortDto::getId, dto -> dto));
+        return CommentMapper.toListCommentResponseDto(comments, eventsMap);
     }
 
     @Override
@@ -168,14 +177,14 @@ public class CommentServiceImpl implements CommentService {
         checkAdminStateAction(comment, commentDto);
         applyAdminStateAction(comment, commentDto.getAdminCommentStateAction());
 
-        return CommentMapper.toCommentResponseDto(comment);
+        List<EventShortDto> eventDtos = eventQuery.getEventsDto(List.of(comment.getEvent()));
+        EventShortDto realEventDto = eventDtos.isEmpty() ? null : eventDtos.getFirst();
+
+        return CommentMapper.toCommentResponseDto(comment, realEventDto);
     }
 
     private void checkAdminStateAction(Comment comment, CommentAdminUpdateDto commentDto) {
         AdminCommentStateAction adminCommentStateAction = commentDto.getAdminCommentStateAction();
-        if (adminCommentStateAction == null) {
-            return;
-        }
 
         if (adminCommentStateAction == AdminCommentStateAction.PUBLISH_COMMENT) {
             if (comment.getState() != CommentState.PENDING) {
@@ -188,11 +197,11 @@ public class CommentServiceImpl implements CommentService {
     }
 
     private void applyAdminStateAction(Comment comment, AdminCommentStateAction commentStateAction) {
-        if (commentStateAction == null) {
-            return;
-        }
         switch (commentStateAction) {
-            case PUBLISH_COMMENT -> comment.setState(CommentState.PUBLISHED);
+            case PUBLISH_COMMENT -> {
+                comment.setState(CommentState.PUBLISHED);
+                comment.setPublishedOn(LocalDateTime.now());
+            }
             case REJECT_COMMENT -> comment.setState(CommentState.REJECTED);
         }
     }

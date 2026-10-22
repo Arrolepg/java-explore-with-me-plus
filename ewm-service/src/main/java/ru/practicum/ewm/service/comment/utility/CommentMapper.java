@@ -6,10 +6,11 @@ import ru.practicum.ewm.service.comment.dto.response.CommentAuthorResponseDto;
 import ru.practicum.ewm.service.comment.dto.response.CommentEventResponseDto;
 import ru.practicum.ewm.service.comment.dto.response.CommentResponseDto;
 import ru.practicum.ewm.service.comment.model.Comment;
-import ru.practicum.ewm.service.event.utility.EventMapper;
+import ru.practicum.ewm.service.event.dto.response.EventShortDto;
 import ru.practicum.ewm.service.user.utility.UserMapper;
 
 import java.util.List;
+import java.util.Map;
 
 @UtilityClass
 public class CommentMapper {
@@ -47,14 +48,34 @@ public class CommentMapper {
                 .toList();
     }
 
-    public CommentResponseDto toCommentResponseDto(Comment comment) {
+    public static CommentResponseDto toCommentResponseDto(Comment comment) {
         return CommentResponseDto.builder()
-                .event(EventMapper.toEventShortDto(comment.getEvent(), 0L, 0L, 0L))
+                .id(comment.getId())
                 .author(UserMapper.toUserShortDto(comment.getAuthor()))
                 .text(comment.getText())
                 .createdOn(comment.getCreatedOn())
                 .publishedOn(comment.getPublishedOn())
                 .state(comment.getState())
+                .event(null)
                 .build();
+    }
+
+    public static CommentResponseDto toCommentResponseDto(Comment comment, EventShortDto eventShortDto) {
+        CommentResponseDto dto = toCommentResponseDto(comment);
+        dto.setEvent(eventShortDto);
+        return dto;
+    }
+
+    public static List<CommentResponseDto> toListCommentResponseDto(List<Comment> comments, Map<Long, EventShortDto> eventsMap) {
+        return comments.stream()
+                .map(comment -> {
+                    CommentResponseDto dto = CommentMapper.toCommentResponseDto(comment);
+                    Long eventId = comment.getEvent().getId();
+                    if (eventsMap != null && eventsMap.containsKey(eventId)) {
+                        dto.setEvent(eventsMap.get(eventId));
+                    }
+                    return dto;
+                })
+                .toList();
     }
 }

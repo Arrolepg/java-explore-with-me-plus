@@ -8,12 +8,13 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.query.QueryUtils;
 import ru.practicum.ewm.service.comment.model.Comment;
 import ru.practicum.ewm.service.comment.model.CommentSearchSort;
 import ru.practicum.ewm.service.comment.utility.CommentPaginationParams;
 import jakarta.persistence.criteria.*;
 
-import java.util.ArrayList;
+import org.springframework.data.domain.Pageable;
 
 
 import java.util.List;
@@ -23,7 +24,7 @@ public class CommentSearchRepositoryImpl implements CommentSearchRepository {
     private EntityManager entityManager;
 
     @Override
-    public List<Comment> findAllWithFetch(Specification<Comment> specification, CommentPaginationParams params) {
+    public List<Comment> findAllWithFetch(Specification<Comment> specification, Pageable pageable) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Comment> query = cb.createQuery(Comment.class);
         Root<Comment> root = query.from(Comment.class);
@@ -36,20 +37,15 @@ public class CommentSearchRepositoryImpl implements CommentSearchRepository {
             query.where(predicate);
         }
 
+        query.orderBy(QueryUtils.toOrders(pageable.getSort(), root, cb));
 
-        List<Order> orders = new ArrayList<>();
-        if (params.sort() == CommentSearchSort.CREATE_DATE) {
-            orders.add(cb.desc(root.get("createdOn")));
-            orders.add(cb.asc(root.get("id")));
-        } else {
-            orders.add(cb.asc(root.get("id")));
-        }
-        query.orderBy(orders);
         TypedQuery<Comment> typedQuery = entityManager.createQuery(query);
+        if (pageable.isPaged()) {
+            typedQuery.setFirstResult((int) pageable.getOffset());
+            typedQuery.setMaxResults(pageable.getPageSize());
+        }
 
-        return typedQuery.setFirstResult(params.from())
-                .setMaxResults(params.size())
-                .getResultList();
+        return typedQuery.getResultList();
     }
 
     public List<Comment> findAllByAuthorId(Long userId, CommentPaginationParams params) {

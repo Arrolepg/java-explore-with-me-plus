@@ -13,4 +13,6 @@ public interface EventQuery {
     List<Event> findAllByIdWithFetch(List<Long> eventsIds);
 
     List<EventShortDto> getEventsDto(List<Event> events);
+
+
 }
