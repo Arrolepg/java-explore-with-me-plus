@@ -48,34 +48,27 @@ public class CommentMapper {
                 .toList();
     }
 
-    public static CommentResponseDto toCommentResponseDto(Comment comment) {
+    public static CommentResponseDto toCommentResponseDto(Comment comment, EventShortDto eventShortDto) {
         return CommentResponseDto.builder()
                 .id(comment.getId())
+                .event(eventShortDto)
                 .author(UserMapper.toUserShortDto(comment.getAuthor()))
                 .text(comment.getText())
                 .createdOn(comment.getCreatedOn())
                 .publishedOn(comment.getPublishedOn())
                 .state(comment.getState())
-                .event(null)
                 .build();
     }
 
-    public static CommentResponseDto toCommentResponseDto(Comment comment, EventShortDto eventShortDto) {
-        CommentResponseDto dto = toCommentResponseDto(comment);
-        dto.setEvent(eventShortDto);
-        return dto;
-    }
-
-    public static List<CommentResponseDto> toListCommentResponseDto(List<Comment> comments, Map<Long, EventShortDto> eventsMap) {
+    public static List<CommentResponseDto> toListCommentResponseDto(List<Comment> comments,
+                                                                    Map<Long, EventShortDto> eventsMap) {
         return comments.stream()
-                .map(comment -> {
-                    CommentResponseDto dto = CommentMapper.toCommentResponseDto(comment);
-                    Long eventId = comment.getEvent().getId();
-                    if (eventsMap != null && eventsMap.containsKey(eventId)) {
-                        dto.setEvent(eventsMap.get(eventId));
-                    }
-                    return dto;
-                })
+                .map(comment ->
+                    toCommentResponseDto(
+                            comment,
+                            eventsMap.get(comment.getEvent().getId())
+                    )
+                )
                 .toList();
     }
 }
