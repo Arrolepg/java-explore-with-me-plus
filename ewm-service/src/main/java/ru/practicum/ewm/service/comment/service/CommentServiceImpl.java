@@ -123,6 +123,8 @@ public class CommentServiceImpl implements CommentService {
 
         comment.setText(commentRequestDto.getText());
         comment.setState(CommentState.PENDING);
+        comment.setPublishedOn(null);
+
         commentRepository.save(comment);
 
         log.info("Комментарий пользователя изменен: commentId = {}, userId = {}", commentId, userId);

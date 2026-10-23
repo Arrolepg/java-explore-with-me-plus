@@ -30,7 +30,6 @@ public class CommentSearchRepositoryImpl implements CommentSearchRepository {
         Root<Comment> root = query.from(Comment.class);
 
         root.fetch("author", JoinType.LEFT);
-        //root.fetch("event", JoinType.LEFT);
 
         Predicate predicate = specification.toPredicate(root, query, cb);
         if (predicate != null) {

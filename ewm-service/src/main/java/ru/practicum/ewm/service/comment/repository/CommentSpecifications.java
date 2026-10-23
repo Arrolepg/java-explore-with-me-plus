@@ -3,6 +3,7 @@ package ru.practicum.ewm.service.comment.repository;
 import lombok.experimental.UtilityClass;
 import org.springframework.data.jpa.domain.Specification;
 import ru.practicum.ewm.service.comment.model.Comment;
+import ru.practicum.ewm.service.comment.model.CommentState;
 import ru.practicum.ewm.service.comment.model.CommentStateFilter;
 import ru.practicum.ewm.service.comment.model.Comment_;
 import ru.practicum.ewm.service.comment.utility.AdminCommentSearchFilter;
@@ -33,10 +34,12 @@ public class CommentSpecifications {
         return (root, query, cb) -> root.get(Comment_.EVENT).get(Event_.ID).in(eventIds);
     }
 
-    private Specification<Comment> stateEqualsTo(CommentStateFilter state) {
-        if (state == null || state == CommentStateFilter.ALL) {
+    private Specification<Comment> stateEqualsTo(CommentStateFilter stateFilter) {
+        if (stateFilter == null || stateFilter == CommentStateFilter.ALL) {
             return null;
         }
+
+        CommentState state = CommentState.valueOf(stateFilter.name());
 
         return (root, query, criteriaBuilder) ->
                 criteriaBuilder.equal(root.get(Comment_.STATE), state);

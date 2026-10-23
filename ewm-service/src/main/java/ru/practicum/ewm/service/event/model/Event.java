@@ -24,7 +24,6 @@ public class Event {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
-    @ToString.Exclude
     private Category category;
 
     private String description;
@@ -56,7 +55,6 @@ public class Event {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "initiator_id")
-    @ToString.Exclude
     private User initiator;
 
     @PrePersist

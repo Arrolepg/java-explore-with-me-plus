@@ -10,7 +10,7 @@ import java.util.List;
 @UtilityClass
 public class CategoryMapper {
 
-    public static Category toCategory(CategoryCreateDto createDto) {
+    public Category toCategory(CategoryCreateDto createDto) {
         return Category.builder()
                 .name(createDto.getName())
                 .build();

@@ -22,11 +22,9 @@ public class Comment {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id")
-    @ToString.Exclude
     private Event event;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @ToString.Exclude
     @JoinColumn(name = "author_id")
     private User author;
 

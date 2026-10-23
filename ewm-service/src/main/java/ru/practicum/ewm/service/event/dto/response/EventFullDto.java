@@ -56,5 +56,5 @@ public class EventFullDto {
     private Long views = 0L;
 
     @Builder.Default
-    List<CommentEventResponseDto> comments = List.of();
+    private List<CommentEventResponseDto> comments = List.of();
 }

@@ -48,7 +48,7 @@ public class CommentMapper {
                 .toList();
     }
 
-    public static CommentResponseDto toCommentResponseDto(Comment comment, EventShortDto eventShortDto) {
+    public CommentResponseDto toCommentResponseDto(Comment comment, EventShortDto eventShortDto) {
         return CommentResponseDto.builder()
                 .id(comment.getId())
                 .event(eventShortDto)
@@ -60,7 +60,7 @@ public class CommentMapper {
                 .build();
     }
 
-    public static List<CommentResponseDto> toListCommentResponseDto(List<Comment> comments,
+    public List<CommentResponseDto> toListCommentResponseDto(List<Comment> comments,
                                                                     Map<Long, EventShortDto> eventsMap) {
         return comments.stream()
                 .map(comment ->

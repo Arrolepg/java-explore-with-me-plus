@@ -145,6 +145,7 @@ class CommentServiceImplUnitTest {
     @Test
     void updateChangesTextAndReturnsCommentToPending() {
         comment.setState(CommentState.PUBLISHED);
+        comment.setPublishedOn(LocalDateTime.of(2026, 10, 3, 12, 0));
 
         when(commentRepository.findByIdAndAuthorId(COMMENT_ID, USER_ID))
                 .thenReturn(Optional.of(comment));
@@ -154,6 +155,7 @@ class CommentServiceImplUnitTest {
         assertThat(result.getId()).isEqualTo(COMMENT_ID);
         assertThat(result.getText()).isEqualTo("new text");
         assertThat(result.getState()).isEqualTo(CommentState.PENDING);
+        assertThat(result.getPublishedOn()).isNull();
 
         assertThat(comment.getText()).isEqualTo("new text");
         assertThat(comment.getState()).isEqualTo(CommentState.PENDING);
