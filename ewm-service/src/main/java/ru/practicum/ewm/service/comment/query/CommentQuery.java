@@ -13,4 +13,6 @@ public interface CommentQuery {
 
     Map<Long, List<CommentEventResponseDto>> findCommentsWithAuthorByEventIdsAndState(List<Long> eventIds,
                                                                                       CommentState commentState);
+
+    long countCommentsByEventIdAndState(Long eventId, CommentState commentState);
 }

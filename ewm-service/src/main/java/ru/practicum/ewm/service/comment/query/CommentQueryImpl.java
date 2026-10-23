@@ -41,4 +41,11 @@ public class CommentQueryImpl implements CommentQuery {
                         Collectors.mapping(CommentMapper::toCommentEventResponseDto, Collectors.toList())
                 ));
     }
+
+    @Override
+    public long countCommentsByEventIdAndState(Long eventId, CommentState commentState) {
+        return commentRepository.countCommentsByEventIdAndState(eventId, commentState);
+    }
+
+
 }

@@ -48,6 +48,31 @@ public class EventQueryImpl implements EventQuery {
             return List.of();
         }
         List<Long> eventsIds = getEventsIds(events);
+        return getEventShortDtos(events, eventsIds);
+    }
+
+    @Override
+    public List<EventShortDto> getEventsDtoByIds(List<Long> eventsIds) {
+        List<Event> events = eventRepository.findAllByIdWithFetch(eventsIds);
+        if (events.isEmpty()) return List.of();
+
+        return getEventShortDtos(events, eventsIds);
+    }
+
+    @Override
+    public EventShortDto getEventDtoById(Long eventId) {
+        Event event = eventRepository.findByIdWithFetch(eventId)
+                .orElseThrow(
+                        () -> new NotFoundException("Событие с id = " + eventId + " не найдено")
+                );
+        long confirmedRequests = requestQuery.countRequestsByEventIdAndStatus(event.getId(), RequestStatus.CONFIRMED);
+        long views = eventStatsAdapter.getViews(event.getId());
+        long comments = commentQuery.countCommentsByEventIdAndState(event.getId(), CommentState.PUBLISHED);
+
+        return EventMapper.toEventShortDto(event, confirmedRequests, views, comments);
+    }
+
+    private List<EventShortDto> getEventShortDtos(List<Event> events, List<Long> eventsIds) {
         Map<Long, Long> confirmedRequestsMap = requestQuery
                 .countRequestsByEventIdsAndStatus(eventsIds, RequestStatus.CONFIRMED);
         Map<Long, Long> viewsMap = eventStatsAdapter

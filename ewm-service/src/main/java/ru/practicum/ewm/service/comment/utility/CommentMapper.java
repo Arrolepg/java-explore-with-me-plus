@@ -1,13 +1,16 @@
 package ru.practicum.ewm.service.comment.utility;
 
+
 import lombok.experimental.UtilityClass;
 import ru.practicum.ewm.service.comment.dto.response.CommentAuthorResponseDto;
 import ru.practicum.ewm.service.comment.dto.response.CommentEventResponseDto;
 import ru.practicum.ewm.service.comment.dto.response.CommentResponseDto;
 import ru.practicum.ewm.service.comment.model.Comment;
+import ru.practicum.ewm.service.event.dto.response.EventShortDto;
 import ru.practicum.ewm.service.user.utility.UserMapper;
 
 import java.util.List;
+import java.util.Map;
 
 @UtilityClass
 public class CommentMapper {
@@ -45,8 +48,27 @@ public class CommentMapper {
                 .toList();
     }
 
-    public CommentResponseDto toCommentResponseDto() {
+    public static CommentResponseDto toCommentResponseDto(Comment comment, EventShortDto eventShortDto) {
         return CommentResponseDto.builder()
+                .id(comment.getId())
+                .event(eventShortDto)
+                .author(UserMapper.toUserShortDto(comment.getAuthor()))
+                .text(comment.getText())
+                .createdOn(comment.getCreatedOn())
+                .publishedOn(comment.getPublishedOn())
+                .state(comment.getState())
                 .build();
+    }
+
+    public static List<CommentResponseDto> toListCommentResponseDto(List<Comment> comments,
+                                                                    Map<Long, EventShortDto> eventsMap) {
+        return comments.stream()
+                .map(comment ->
+                    toCommentResponseDto(
+                            comment,
+                            eventsMap.get(comment.getEvent().getId())
+                    )
+                )
+                .toList();
     }
 }
