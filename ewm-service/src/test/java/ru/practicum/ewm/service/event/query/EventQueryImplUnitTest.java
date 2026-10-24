@@ -7,6 +7,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import ru.practicum.ewm.service.adapter.EventStatsAdapter;
 import ru.practicum.ewm.service.category.model.Category;
+import ru.practicum.ewm.service.comment.model.CommentState;
+import ru.practicum.ewm.service.comment.query.CommentQuery;
 import ru.practicum.ewm.service.event.dto.response.EventShortDto;
 import ru.practicum.ewm.service.event.model.Event;
 import ru.practicum.ewm.service.event.repository.EventRepository;
@@ -36,6 +38,9 @@ public class EventQueryImplUnitTest {
 
     @Mock
     private RequestQuery requestQuery;
+
+    @Mock
+    private CommentQuery commentQuery;
 
     @Mock
     private EventStatsAdapter eventStatsAdapter;
@@ -103,6 +108,8 @@ public class EventQueryImplUnitTest {
 
         when(eventStatsAdapter.getViews(ids))
                 .thenReturn(Map.of(1L, 10L, 2L, 20L));
+        when(commentQuery.countCommentsByEventIdsAndState(ids, CommentState.PUBLISHED))
+                .thenReturn(Map.of(1L, 3L, 2L, 5L));
 
         List<EventShortDto> result =
                 eventQuery.getEventsDto(List.of(event1, event2));
@@ -118,6 +125,7 @@ public class EventQueryImplUnitTest {
         assertThat(dto1.getInitiator().getName()).isEqualTo("Igor");
         assertThat(dto1.getConfirmedRequests()).isEqualTo(3L);
         assertThat(dto1.getViews()).isEqualTo(10L);
+        assertThat(dto1.getCommentsCount()).isEqualTo(3L);
 
         EventShortDto dto2 = result.getLast();
         assertThat(dto2.getId()).isEqualTo(2L);
@@ -128,10 +136,14 @@ public class EventQueryImplUnitTest {
         assertThat(dto2.getInitiator().getName()).isEqualTo("Ivan");
         assertThat(dto2.getConfirmedRequests()).isEqualTo(7L);
         assertThat(dto2.getViews()).isEqualTo(20L);
+        assertThat(dto2.getCommentsCount()).isEqualTo(5L);
 
         verify(requestQuery).countRequestsByEventIdsAndStatus(
                 ids, RequestStatus.CONFIRMED);
         verify(eventStatsAdapter).getViews(ids);
+        verify(commentQuery).countCommentsByEventIdsAndState(
+                ids, CommentState.PUBLISHED
+        );
     }
 
     @Test
@@ -145,6 +157,8 @@ public class EventQueryImplUnitTest {
 
         when(eventStatsAdapter.getViews(ids))
                 .thenReturn(Map.of());
+        when(commentQuery.countCommentsByEventIdsAndState(ids, CommentState.PUBLISHED))
+                .thenReturn(Map.of());
 
         List<EventShortDto> result = eventQuery.getEventsDto(List.of(event));
 
@@ -152,6 +166,7 @@ public class EventQueryImplUnitTest {
         assertThat(result.getFirst().getId()).isEqualTo(1L);
         assertThat(result.getFirst().getConfirmedRequests()).isZero();
         assertThat(result.getFirst().getViews()).isZero();
+        assertThat(result.getFirst().getCommentsCount()).isZero();
     }
 
     private Event createEventForDto(

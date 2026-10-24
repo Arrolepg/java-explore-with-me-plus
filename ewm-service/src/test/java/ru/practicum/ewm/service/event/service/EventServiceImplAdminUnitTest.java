@@ -11,6 +11,8 @@ import org.springframework.data.domain.Sort;
 import ru.practicum.ewm.service.adapter.EventStatsAdapter;
 import ru.practicum.ewm.service.category.model.Category;
 import ru.practicum.ewm.service.category.query.CategoryQuery;
+import ru.practicum.ewm.service.comment.model.CommentState;
+import ru.practicum.ewm.service.comment.query.CommentQuery;
 import ru.practicum.ewm.service.event.dto.request.EventLocationUpdateDto;
 import ru.practicum.ewm.service.event.dto.request.UpdateEventAdminRequest;
 import ru.practicum.ewm.service.event.dto.response.EventFullDto;
@@ -54,6 +56,9 @@ public class EventServiceImplAdminUnitTest {
     private RequestQuery requestQuery;
 
     @Mock
+    private CommentQuery commentQuery;
+
+    @Mock
     private EventStatsAdapter eventStatsAdapter;
 
     @InjectMocks
@@ -67,6 +72,8 @@ public class EventServiceImplAdminUnitTest {
         when(requestQuery.countRequestsByEventIdsAndStatus(List.of(EVENT_ID), RequestStatus.CONFIRMED))
                 .thenReturn(Map.of(EVENT_ID, 3L));
         when(eventStatsAdapter.getViews(List.of(event.getId()))).thenReturn(Map.of(EVENT_ID, 7L));
+        when(commentQuery.findCommentsWithAuthorByEventIdsAndState(List.of(EVENT_ID), CommentState.PUBLISHED))
+                .thenReturn(Map.of());
 
         List<EventFullDto> result = eventService.findAllByAdmin(filter(), params());
 
@@ -208,6 +215,8 @@ public class EventServiceImplAdminUnitTest {
     private void stubCounters(Event event) {
         when(requestQuery.countRequestsByEventIdAndStatus(EVENT_ID, RequestStatus.CONFIRMED)).thenReturn(0L);
         when(eventStatsAdapter.getViews(event.getId())).thenReturn(0L);
+        when(commentQuery.findCommentsWithAuthorByEventIdAndState(EVENT_ID, CommentState.PUBLISHED))
+                .thenReturn(List.of());
     }
 
     private AdminEventSearchFilter filter() {
@@ -242,7 +251,6 @@ public class EventServiceImplAdminUnitTest {
                 .requestModeration(true)
                 .title("Title")
                 .state(state)
-                .createdOn(LocalDateTime.now())
                 .initiator(initiator)
                 .build();
     }

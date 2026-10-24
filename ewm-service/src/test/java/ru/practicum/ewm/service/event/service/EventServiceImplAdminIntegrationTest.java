@@ -205,7 +205,6 @@ public class EventServiceImplAdminIntegrationTest {
                 .requestModeration(true)
                 .title("Title")
                 .state(state)
-                .createdOn(LocalDateTime.now())
                 .publishedOn(state == EventState.PUBLISHED ? LocalDateTime.now() : null)
                 .initiator(initiator)
                 .build();

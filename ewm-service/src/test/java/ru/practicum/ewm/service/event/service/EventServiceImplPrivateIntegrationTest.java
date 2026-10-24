@@ -43,7 +43,7 @@ import static org.mockito.Mockito.when;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
-public class EventServiceImplIntegrationTest {
+public class EventServiceImplPrivateIntegrationTest {
     private static final String OWNER_NAME = "Owner";
     private static final String OWNER_EMAIL = "owner@mail.com";
     private static final String SECOND_NAME = "Second";
@@ -100,7 +100,6 @@ public class EventServiceImplIntegrationTest {
     void testUpdate() {
         User owner = createUser(OWNER_NAME, OWNER_EMAIL);
         Event event = createEvent(owner, EventState.PENDING);
-        when(eventStatsAdapter.getViews(any(Long.class))).thenReturn(0L);
 
         UpdateEventUserRequest dto = new UpdateEventUserRequest();
         dto.setTitle("Updated title");
@@ -335,7 +334,6 @@ public class EventServiceImplIntegrationTest {
                 .requestModeration(true)
                 .title(TITLE)
                 .state(state)
-                .createdOn(LocalDateTime.now())
                 .initiator(initiator)
                 .build();
         return eventRepository.save(event);

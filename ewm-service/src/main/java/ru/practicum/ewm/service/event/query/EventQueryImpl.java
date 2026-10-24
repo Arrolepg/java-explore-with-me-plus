@@ -3,6 +3,8 @@ package ru.practicum.ewm.service.event.query;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import ru.practicum.ewm.service.adapter.EventStatsAdapter;
+import ru.practicum.ewm.service.comment.model.CommentState;
+import ru.practicum.ewm.service.comment.query.CommentQuery;
 import ru.practicum.ewm.service.event.dto.response.EventShortDto;
 import ru.practicum.ewm.service.event.model.Event;
 import ru.practicum.ewm.service.event.repository.EventRepository;
@@ -19,6 +21,7 @@ import java.util.Map;
 public class EventQueryImpl implements EventQuery {
     private final EventRepository eventRepository;
     private final RequestQuery requestQuery;
+    private final CommentQuery commentQuery;
     private final EventStatsAdapter eventStatsAdapter;
 
     @Override
@@ -45,12 +48,38 @@ public class EventQueryImpl implements EventQuery {
             return List.of();
         }
         List<Long> eventsIds = getEventsIds(events);
+        return getEventShortDtos(events, eventsIds);
+    }
+
+    @Override
+    public List<EventShortDto> getEventsDtoByIds(List<Long> eventsIds) {
+        List<Event> events = eventRepository.findAllByIdWithFetch(eventsIds);
+        if (events.isEmpty()) return List.of();
+
+        return getEventShortDtos(events, eventsIds);
+    }
+
+    @Override
+    public EventShortDto getEventDtoById(Long eventId) {
+        Event event = eventRepository.findByIdWithFetch(eventId)
+                .orElseThrow(
+                        () -> new NotFoundException("Событие с id = " + eventId + " не найдено")
+                );
+        long confirmedRequests = requestQuery.countRequestsByEventIdAndStatus(event.getId(), RequestStatus.CONFIRMED);
+        long views = eventStatsAdapter.getViews(event.getId());
+        long comments = commentQuery.countCommentsByEventIdAndState(event.getId(), CommentState.PUBLISHED);
+
+        return EventMapper.toEventShortDto(event, confirmedRequests, views, comments);
+    }
+
+    private List<EventShortDto> getEventShortDtos(List<Event> events, List<Long> eventsIds) {
         Map<Long, Long> confirmedRequestsMap = requestQuery
                 .countRequestsByEventIdsAndStatus(eventsIds, RequestStatus.CONFIRMED);
         Map<Long, Long> viewsMap = eventStatsAdapter
                 .getViews(eventsIds);
+        Map<Long, Long> commentsMap = commentQuery.countCommentsByEventIdsAndState(eventsIds, CommentState.PUBLISHED);
 
-        return EventMapper.toListEventShortDto(events, confirmedRequestsMap, viewsMap);
+        return EventMapper.toListEventShortDto(events, confirmedRequestsMap, viewsMap, commentsMap);
     }
 
     private List<Long> getEventsIds(List<Event> events) {
