@@ -61,9 +61,4 @@ public class Event {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "initiator_id")
     private User initiator;
-
-//    @PrePersist
-//    void applyDefaults() {
-//        if (state == null) state = EventState.PENDING;
-//    }
 }
