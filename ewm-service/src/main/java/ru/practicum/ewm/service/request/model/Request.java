@@ -22,14 +22,12 @@ public class Request {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id")
-    @ToString.Exclude
     private Event event;
 
     private LocalDateTime created;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "requester_id")
-    @ToString.Exclude
     private User requester;
 
     @Enumerated(EnumType.STRING)

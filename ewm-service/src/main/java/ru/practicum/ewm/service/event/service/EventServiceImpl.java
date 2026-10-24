@@ -9,6 +9,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.service.category.model.Category;
 import ru.practicum.ewm.service.category.query.CategoryQuery;
+import ru.practicum.ewm.service.comment.dto.response.CommentEventResponseDto;
+import ru.practicum.ewm.service.comment.model.CommentState;
+import ru.practicum.ewm.service.comment.query.CommentQuery;
 import ru.practicum.ewm.service.event.utility.EventPaginationParams;
 import ru.practicum.ewm.service.event.dto.request.EventLocationUpdateDto;
 import ru.practicum.ewm.service.event.dto.request.EventRequestStatusUpdateRequest;
@@ -54,6 +57,7 @@ public class EventServiceImpl implements EventService {
     private final CategoryQuery categoryQuery;
     private final RequestQuery requestQuery;
     private final EventQuery eventQuery;
+    private final CommentQuery commentQuery;
 
     private final RequestCommandService requestCommandService;
 
@@ -82,10 +86,7 @@ public class EventServiceImpl implements EventService {
         applyUpdates(event, eventDto);
         applyUserStateAction(event, eventDto.getStateAction());
 
-        long confirmedRequests = requestQuery.countRequestsByEventIdAndStatus(event.getId(), RequestStatus.CONFIRMED);
-        long views = eventStatsAdapter.getViews(event.getId());
-
-        return EventMapper.toEventFullDto(event, confirmedRequests, views);
+        return EventMapper.toEventFullDto(event);
     }
 
     @Override
@@ -124,18 +125,8 @@ public class EventServiceImpl implements EventService {
         Pageable pageable = toPageable(eventPaginationParams);
 
         List<Event> events = eventRepository.findEventsByInitiatorIdWithFetch(userId, pageable);
-        if (events.isEmpty()) {
-            return List.of();
-        }
 
-        List<Long> eventsIds = events.stream()
-                .map(Event::getId)
-                .toList();
-        Map<Long, Long> confirmedRequestsMap = requestQuery.countRequestsByEventIdsAndStatus(eventsIds,
-                RequestStatus.CONFIRMED);
-        Map<Long, Long> viewsMap = eventStatsAdapter.getViews(eventsIds);
-
-        return EventMapper.toListEventShortDto(events, confirmedRequestsMap, viewsMap);
+        return eventQuery.getEventsDto(events);
     }
 
     @Override
@@ -147,8 +138,12 @@ public class EventServiceImpl implements EventService {
 
         long confirmedRequests = requestQuery.countRequestsByEventIdAndStatus(event.getId(), RequestStatus.CONFIRMED);
         long views = eventStatsAdapter.getViews(event.getId());
+        List<CommentEventResponseDto> comments = commentQuery.findCommentsWithAuthorByEventIdAndState(
+                event.getId(),
+                CommentState.PUBLISHED
+        );
 
-        return EventMapper.toEventFullDto(event, confirmedRequests, views);
+        return EventMapper.toEventFullDto(event, confirmedRequests, views, comments);
     }
 
     @Override
@@ -161,20 +156,18 @@ public class EventServiceImpl implements EventService {
             return List.of();
         }
 
-        List<Long> eventsIds = events.stream()
+        List<Long> eventIds = events.stream()
                 .map(Event::getId)
                 .toList();
-        Map<Long, Long> confirmedRequestsMap = requestQuery.countRequestsByEventIdsAndStatus(eventsIds,
+        Map<Long, Long> confirmedRequestsMap = requestQuery.countRequestsByEventIdsAndStatus(eventIds,
                 RequestStatus.CONFIRMED);
-        Map<Long, Long> viewsMap = eventStatsAdapter.getViews(eventsIds);
+        Map<Long, Long> viewsMap = eventStatsAdapter.getViews(eventIds);
+        Map<Long, List<CommentEventResponseDto>> commentsMap = commentQuery.findCommentsWithAuthorByEventIdsAndState(
+                eventIds,
+                CommentState.PUBLISHED
+        );
 
-        return events.stream()
-                .map(event -> EventMapper.toEventFullDto(
-                        event,
-                        confirmedRequestsMap.getOrDefault(event.getId(), 0L),
-                        viewsMap.getOrDefault(event.getId(), 0L)
-                ))
-                .toList();
+        return EventMapper.toListEventFullDto(events, confirmedRequestsMap, viewsMap, commentsMap);
     }
 
     @Override
@@ -189,8 +182,10 @@ public class EventServiceImpl implements EventService {
 
         long confirmedRequests = requestQuery.countRequestsByEventIdAndStatus(event.getId(), RequestStatus.CONFIRMED);
         long views = eventStatsAdapter.getViews(event.getId());
+        List<CommentEventResponseDto> comments = commentQuery.findCommentsWithAuthorByEventIdAndState(event.getId(),
+                CommentState.PUBLISHED);
 
-        return EventMapper.toEventFullDto(event, confirmedRequests, views);
+        return EventMapper.toEventFullDto(event, confirmedRequests, views, comments);
     }
 
     @Override
@@ -206,13 +201,14 @@ public class EventServiceImpl implements EventService {
             return List.of();
         }
 
-        List<Long> eventsIds = events.stream()
+        List<Long> eventIds = events.stream()
                 .map(Event::getId)
                 .toList();
         Map<Long, Long> confirmedMap = requestQuery.countRequestsByEventIdsAndStatus(
-                eventsIds, RequestStatus.CONFIRMED
+                eventIds, RequestStatus.CONFIRMED
         );
-        Map<Long, Long> viewsMap = eventStatsAdapter.getViews(eventsIds);
+        Map<Long, Long> viewsMap = eventStatsAdapter.getViews(eventIds);
+        Map<Long, Long> commentsMap = commentQuery.countCommentsByEventIdsAndState(eventIds, CommentState.PUBLISHED);
 
         if (eventPaginationParams.sort() == EventSearchSort.VIEWS) {
             events = events.stream()
@@ -226,7 +222,7 @@ public class EventServiceImpl implements EventService {
 
         eventStatsAdapter.createHit(hitParams.uri(), hitParams.ip());
 
-        return EventMapper.toListEventShortDto(events, confirmedMap, viewsMap);
+        return EventMapper.toListEventShortDto(events, confirmedMap, viewsMap, commentsMap);
     }
 
     @Override
@@ -238,8 +234,12 @@ public class EventServiceImpl implements EventService {
 
         long confirmedRequests = requestQuery.countRequestsByEventIdAndStatus(event.getId(), RequestStatus.CONFIRMED);
         Long views = eventStatsAdapter.getViews(event.getId());
+        List<CommentEventResponseDto> comments = commentQuery.findCommentsWithAuthorByEventIdAndState(
+                event.getId(),
+                CommentState.PUBLISHED
+        );
 
-        return EventMapper.toEventFullDto(event, confirmedRequests, views);
+        return EventMapper.toEventFullDto(event, confirmedRequests, views, comments);
     }
 
     private void checkInitiator(Long initiatorId, Long userId) {

@@ -453,7 +453,6 @@ class EventServiceImplPublicIntegrationTest {
                 .requestModeration(true)
                 .title(title)
                 .state(state)
-                .createdOn(LocalDateTime.now())
                 .publishedOn(state == EventState.PUBLISHED ? LocalDateTime.now() : null)
                 .initiator(initiator)
                 .build();

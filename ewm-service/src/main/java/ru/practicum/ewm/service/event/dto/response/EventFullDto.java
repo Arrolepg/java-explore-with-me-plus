@@ -6,10 +6,12 @@ import lombok.Builder;
 import lombok.Data;
 import ru.practicum.common.util.PatternDataTime;
 import ru.practicum.ewm.service.category.dto.response.CategoryResponseDto;
+import ru.practicum.ewm.service.comment.dto.response.CommentEventResponseDto;
 import ru.practicum.ewm.service.event.model.EventState;
 import ru.practicum.ewm.service.user.dto.UserShortDto;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -52,4 +54,7 @@ public class EventFullDto {
 
     @Builder.Default
     private Long views = 0L;
+
+    @Builder.Default
+    private List<CommentEventResponseDto> comments = List.of();
 }
