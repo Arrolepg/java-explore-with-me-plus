@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -14,9 +15,9 @@ import org.springframework.test.context.ActiveProfiles;
 import ru.practicum.ewm.service.category.model.Category;
 import ru.practicum.ewm.service.comment.model.Comment;
 import ru.practicum.ewm.service.comment.model.CommentState;
+import ru.practicum.ewm.service.config.JpaAuditingConfig;
 import ru.practicum.ewm.service.event.model.Event;
 import ru.practicum.ewm.service.event.model.EventLocation;
-import ru.practicum.ewm.service.event.model.EventState;
 import ru.practicum.ewm.service.user.model.User;
 import org.springframework.data.domain.Pageable;
 
@@ -28,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ImportAutoConfiguration(JacksonAutoConfiguration.class)
+@Import(JpaAuditingConfig.class)
 @ActiveProfiles("test")
 public class CommentRepositorySearchTest {
     private static final String NAME = "Author";
@@ -45,7 +47,7 @@ public class CommentRepositorySearchTest {
         User author2 = createUser("2");
         User author3 = createUser("3");
         Category category = createCategory();
-        Event event = createEvent(author1, category, "Event");
+        Event event = createEvent(author1, category);
 
         // У каждого комментария свой уникальный автор в рамках одного события
         createCommentWithText(author1, event, CommentState.PUBLISHED, "Matching text for search");
@@ -76,7 +78,7 @@ public class CommentRepositorySearchTest {
         User author1 = createUser("1");
         User author2 = createUser("2");
         Category category = createCategory();
-        Event event = createEvent(author1, category, "Event");
+        Event event = createEvent(author1, category);
 
         // Создаем комментарии от РАЗНЫХ авторов с искусственным сдвигом по времени
         Comment olderComment = Comment.builder()
@@ -84,7 +86,6 @@ public class CommentRepositorySearchTest {
                 .event(event)
                 .text("Older comment")
                 .state(CommentState.PUBLISHED)
-                .createdOn(LocalDateTime.now().minusDays(2))
                 .build();
         entityManager.persist(olderComment);
 
@@ -93,12 +94,14 @@ public class CommentRepositorySearchTest {
                 .event(event)
                 .text("Newer comment")
                 .state(CommentState.PUBLISHED)
-                .createdOn(LocalDateTime.now().minusDays(1))
                 .build();
         entityManager.persist(newerComment);
 
         entityManager.flush();
         entityManager.clear();
+
+        updateCreatedOn(olderComment.getId(), LocalDateTime.now().minusDays(2));
+        updateCreatedOn(newerComment.getId(), LocalDateTime.now().minusDays(1));
 
         Specification<Comment> spec = (root, query, cb) -> cb.conjunction(); // Выбираем все записи
 
@@ -122,7 +125,7 @@ public class CommentRepositorySearchTest {
         User author2 = createUser("2");
         User author3 = createUser("3");
         Category category = createCategory();
-        Event event = createEvent(author1, category, "Event");
+        Event event = createEvent(author1, category);
 
         // Три комментария от трех разных авторов для пагинации
         createCommentWithText(author1, event, CommentState.PUBLISHED, "Comment 1");
@@ -157,7 +160,7 @@ public class CommentRepositorySearchTest {
         return entityManager.persistAndFlush(category);
     }
 
-    private Event createEvent(User initiator, Category category, String title) {
+    private Event createEvent(User initiator, Category category) {
         Event event = Event.builder()
                 .annotation("Some annotation text here for event")
                 .category(category)
@@ -167,9 +170,7 @@ public class CommentRepositorySearchTest {
                 .paid(false)
                 .participantLimit(10)
                 .requestModeration(true)
-                .title(title)
-                .state(EventState.PENDING)
-                .createdOn(LocalDateTime.now())
+                .title("Event")
                 .initiator(initiator)
                 .build();
         return entityManager.persistAndFlush(event);
@@ -181,10 +182,15 @@ public class CommentRepositorySearchTest {
                 .event(event)
                 .text(text)
                 .state(state)
-                .createdOn(LocalDateTime.now())
                 .build();
         entityManager.persistAndFlush(comment);
     }
 
-
+    private void updateCreatedOn(Long commentId, LocalDateTime dateTime) {
+        entityManager.getEntityManager()
+                .createQuery("update Comment as c set c.createdOn = :date where c.id = :id")
+                .setParameter("date", dateTime)
+                .setParameter("id", commentId)
+                .executeUpdate();
+    }
 }

@@ -13,7 +13,6 @@ import ru.practicum.ewm.service.comment.repository.projection.EventCommentsCount
 import ru.practicum.ewm.service.event.model.Event;
 import ru.practicum.ewm.service.user.model.User;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -215,7 +214,6 @@ public class CommentQueryImplUnitTest {
                 .author(author)
                 .text(TEXT)
                 .state(CommentState.PUBLISHED)
-                .createdOn(LocalDateTime.now())
                 .build();
     }
 }

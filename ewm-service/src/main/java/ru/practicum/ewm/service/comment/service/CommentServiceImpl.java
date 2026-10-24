@@ -34,7 +34,6 @@ import ru.practicum.ewm.service.user.model.User;
 import ru.practicum.ewm.service.user.query.UserQuery;
 
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -79,7 +78,7 @@ public class CommentServiceImpl implements CommentService {
     @Override
     @Transactional
     public CommentAuthorResponseDto create(Long userId, CommentAuthorRequestDto commentRequestDto, Long eventId) {
-        LocalDateTime timeCreate = LocalDateTime.now().truncatedTo(ChronoUnit.MICROS);
+        LocalDateTime timeCreate = LocalDateTime.now();
         User user = userQuery.findUser(userId);
         Event event = eventQuery.findEvent(eventId);
 
@@ -106,8 +105,7 @@ public class CommentServiceImpl implements CommentService {
                 .event(event)
                 .author(user)
                 .text(commentRequestDto.getText())
-                .createdOn(timeCreate)
-                .state(CommentState.PENDING).build();
+                .build();
 
         commentRepository.save(comment);
         log.info("Комментарий пользователя сохранен: userId = {}, commentId = {}", userId, comment.getId());

@@ -8,14 +8,15 @@ import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.test.context.ActiveProfiles;
 import ru.practicum.ewm.service.category.model.Category;
+import ru.practicum.ewm.service.config.JpaAuditingConfig;
 import ru.practicum.ewm.service.event.model.Event;
 import ru.practicum.ewm.service.event.model.EventLocation;
-import ru.practicum.ewm.service.event.model.EventState;
 import ru.practicum.ewm.service.user.model.User;
 
 import java.time.LocalDateTime;
@@ -27,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ImportAutoConfiguration(JacksonAutoConfiguration.class)
+@Import(JpaAuditingConfig.class)
 @ActiveProfiles("test")
 public class EventRepositoryTest {
 
@@ -168,8 +170,6 @@ public class EventRepositoryTest {
                 .participantLimit(10)
                 .requestModeration(true)
                 .title(title)
-                .state(EventState.PENDING)
-                .createdOn(LocalDateTime.now())
                 .initiator(initiator)
                 .build();
         return entityManager.persistAndFlush(event);

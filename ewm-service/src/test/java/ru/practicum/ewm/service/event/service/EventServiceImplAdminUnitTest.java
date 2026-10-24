@@ -251,7 +251,6 @@ public class EventServiceImplAdminUnitTest {
                 .requestModeration(true)
                 .title("Title")
                 .state(state)
-                .createdOn(LocalDateTime.now())
                 .initiator(initiator)
                 .build();
     }

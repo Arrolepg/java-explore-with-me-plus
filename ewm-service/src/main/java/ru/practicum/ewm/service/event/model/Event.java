@@ -2,6 +2,8 @@ package ru.practicum.ewm.service.event.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import ru.practicum.ewm.service.category.model.Category;
 import ru.practicum.ewm.service.user.model.User;
 
@@ -15,6 +17,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Table(name = "event")
 @EqualsAndHashCode(of = "id")
+@EntityListeners(AuditingEntityListener.class)
 public class Event {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -44,22 +47,23 @@ public class Event {
 
     private String title;
 
-    @Column(name = "created_on")
+    @CreatedDate
+    @Column(name = "created_on", updatable = false)
     private LocalDateTime createdOn;
 
     @Column(name = "published_on")
     private LocalDateTime publishedOn;
 
     @Enumerated(EnumType.STRING)
-    private EventState state;
+    @Builder.Default
+    private EventState state = EventState.PENDING;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "initiator_id")
     private User initiator;
 
-    @PrePersist
-    void applyDefaults() {
-        if (state == null) state = EventState.PENDING;
-        if (createdOn == null) createdOn = LocalDateTime.now();
-    }
+//    @PrePersist
+//    void applyDefaults() {
+//        if (state == null) state = EventState.PENDING;
+//    }
 }

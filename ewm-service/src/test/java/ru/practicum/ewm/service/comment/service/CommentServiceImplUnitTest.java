@@ -207,7 +207,6 @@ class CommentServiceImplUnitTest {
         assertThat(result.getEventId()).isEqualTo(EVENT_ID);
         assertThat(result.getText()).isEqualTo("new text");
         assertThat(result.getState()).isEqualTo(CommentState.PENDING);
-        assertThat(result.getCreatedOn()).isNotNull();
         assertThat(result.getPublishedOn()).isNull();
 
         verify(commentRepository).save(any(Comment.class));

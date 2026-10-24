@@ -531,7 +531,6 @@ public class EventServiceImplPrivateUnitTest {
                 .requestModeration(true)
                 .title(TITLE)
                 .state(state)
-                .createdOn(LocalDateTime.now())
                 .initiator(createUser(initiatorId))
                 .build();
     }

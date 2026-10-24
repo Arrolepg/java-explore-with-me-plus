@@ -334,7 +334,6 @@ public class EventServiceImplPrivateIntegrationTest {
                 .requestModeration(true)
                 .title(TITLE)
                 .state(state)
-                .createdOn(LocalDateTime.now())
                 .initiator(initiator)
                 .build();
         return eventRepository.save(event);

@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import ru.practicum.ewm.service.category.model.Category;
 import ru.practicum.ewm.service.comment.model.Comment;
@@ -14,9 +15,9 @@ import ru.practicum.ewm.service.comment.model.CommentSearchSort;
 import ru.practicum.ewm.service.comment.model.CommentState;
 import ru.practicum.ewm.service.comment.repository.projection.EventCommentsCount;
 import ru.practicum.ewm.service.comment.utility.CommentPaginationParams;
+import ru.practicum.ewm.service.config.JpaAuditingConfig;
 import ru.practicum.ewm.service.event.model.Event;
 import ru.practicum.ewm.service.event.model.EventLocation;
-import ru.practicum.ewm.service.event.model.EventState;
 import ru.practicum.ewm.service.user.model.User;
 
 import java.time.LocalDateTime;
@@ -28,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ImportAutoConfiguration(JacksonAutoConfiguration.class)
+@Import(JpaAuditingConfig.class)
 @ActiveProfiles("test")
 public class CommentRepositoryTest {
     private static final String NAME = "Author";
@@ -256,13 +258,12 @@ public class CommentRepositoryTest {
         LocalDateTime date = LocalDateTime.of(2026, 10, 1, 12, 0);
 
         Comment comment1 = createComment(author, event1, CommentState.PENDING);
-        comment1.setCreatedOn(date.plusDays(1));
-
         Comment comment2 = createComment(author, event2, CommentState.PENDING);
-        comment2.setCreatedOn(date.plusDays(2));
-
         Comment comment3 = createComment(author, event3, CommentState.PENDING);
-        comment3.setCreatedOn(date);
+
+        updateCreatedOn(comment1.getId(), date.plusDays(1));
+        updateCreatedOn(comment2.getId(), date.plusDays(2));
+        updateCreatedOn(comment3.getId(), date);
 
         entityManager.flush();
         entityManager.clear();
@@ -426,8 +427,6 @@ public class CommentRepositoryTest {
                 .participantLimit(10)
                 .requestModeration(true)
                 .title(title)
-                .state(EventState.PENDING)
-                .createdOn(LocalDateTime.now())
                 .initiator(initiator)
                 .build();
         return entityManager.persistAndFlush(event);
@@ -439,7 +438,6 @@ public class CommentRepositoryTest {
                 .event(event)
                 .text("Comment text")
                 .state(state)
-                .createdOn(LocalDateTime.now())
                 .build();
         return entityManager.persistAndFlush(comment);
     }
@@ -449,5 +447,13 @@ public class CommentRepositoryTest {
                 .filter(r -> r.eventId().equals(eventId))
                 .findFirst()
                 .orElseThrow();
+    }
+
+    private void updateCreatedOn(Long commentId, LocalDateTime dateTime) {
+        entityManager.getEntityManager()
+                .createQuery("update Comment as c set c.createdOn = :date where c.id = :id")
+                .setParameter("date", dateTime)
+                .setParameter("id", commentId)
+                .executeUpdate();
     }
 }

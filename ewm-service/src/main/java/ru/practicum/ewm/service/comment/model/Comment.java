@@ -2,6 +2,8 @@ package ru.practicum.ewm.service.comment.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import ru.practicum.ewm.service.event.model.Event;
 import ru.practicum.ewm.service.user.model.User;
 
@@ -15,6 +17,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "comment")
 @EqualsAndHashCode(of = "id")
+@EntityListeners(AuditingEntityListener.class)
 public class Comment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,18 +33,14 @@ public class Comment {
 
     private String text;
 
-    @Column(name = "created_on")
+    @CreatedDate
+    @Column(name = "created_on", updatable = false)
     private LocalDateTime createdOn;
 
     @Column(name = "published_on")
     private LocalDateTime publishedOn;
 
     @Enumerated(EnumType.STRING)
-    private CommentState state;
-
-    @PrePersist
-    void applyDefaults() {
-        if (state == null) state = CommentState.PENDING;
-        if (createdOn == null) createdOn = LocalDateTime.now();
-    }
+    @Builder.Default
+    private CommentState state = CommentState.PENDING;
 }

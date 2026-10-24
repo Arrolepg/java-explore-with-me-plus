@@ -355,7 +355,6 @@ public class EventServiceImplPublicUnitTest {
                 .requestModeration(true)
                 .title("Title")
                 .state(EventState.PUBLISHED)
-                .createdOn(LocalDateTime.now())
                 .initiator(initiator)
                 .build();
     }
